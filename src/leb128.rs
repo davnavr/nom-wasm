@@ -22,8 +22,8 @@ macro_rules! unsigned {
                 if let Some((byte, remaining)) = input.split_first() {
                     input = remaining;
 
-                    let valid_mask = !(0xFFu8 << (<$integer>::BITS as usize - shift).min(8)) & VALUE_MASK;
-                    if byte & !valid_mask != 0 {
+                    let valid_mask = !(0xFFu8 << (<$integer>::BITS as usize - shift).min(7));
+                    if byte & !(MORE_FLAG | valid_mask) != 0 {
                         return Err(nom::Err::Failure(E::add_context(
                             start,
                             "encoded LEB128 unsigned integer value would overflow",
@@ -31,7 +31,7 @@ macro_rules! unsigned {
                         )));
                     }
 
-                    result |= ((valid_mask as $integer) << shift);
+                    result |= (((byte & valid_mask) as $integer) << shift);
                     shift += 7;
 
                     if byte & MORE_FLAG == 0 {

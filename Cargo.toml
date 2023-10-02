@@ -17,3 +17,10 @@ nom = { version = "7.1.3", default-features = false }
 default = ["std"]
 std = ["alloc", "nom/std"]
 alloc = ["nom/alloc"]
+
+[lib]
+test = false
+
+[[test]]
+name = "tests"
+path = "tests/it/lib.rs"
