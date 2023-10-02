@@ -18,3 +18,9 @@
 extern crate alloc;
 
 pub use nom;
+
+mod parser;
+
+pub use parser::{Error, Parsed};
+
+pub mod module;
