@@ -23,4 +23,5 @@ mod parser;
 
 pub use parser::{Error, Parsed};
 
+pub mod leb128;
 pub mod module;
