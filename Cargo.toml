@@ -1,0 +1,19 @@
+[package]
+name = "nom-wasm"
+description = "Zero-allocation WebAssembly parser using nom"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.72"
+readme = "README.md"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "doc_cfg"]
+
+[dependencies]
+nom = { version = "7.1.3", default-features = false }
+
+[features]
+default = ["std"]
+std = ["alloc", "nom/std"]
+alloc = ["nom/alloc"]
