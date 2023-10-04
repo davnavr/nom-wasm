@@ -1,4 +1,23 @@
 use crate::leb128;
+use core::fmt::Formatter;
+
+/// Describes an [`ErrorCause`] where the length of some data was incorrect.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[allow(missing_docs)]
+pub struct LengthMismatch {
+    pub expected: u32,
+    pub actual: u32,
+}
+
+impl LengthMismatch {
+    fn print(&self, name: &str, f: &mut Formatter) -> core::fmt::Result {
+        write!(
+            f,
+            "expected {} bytes for {name}, but got {}",
+            self.expected, self.actual
+        )
+    }
+}
 
 /// Describes why a parser error occured.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -14,11 +33,17 @@ pub enum ErrorCause {
         reason: leb128::InvalidEncoding,
     },
     #[allow(missing_docs)]
+    NameLength,
+    #[allow(missing_docs)]
+    NameContents(LengthMismatch),
+    #[allow(missing_docs)]
+    NameEncoding(core::str::Utf8Error),
+    #[allow(missing_docs)]
     SectionId,
     #[allow(missing_docs)]
     SectionLength,
     #[allow(missing_docs)]
-    SectionContents { expected: u32, actual: u32 },
+    SectionContents(LengthMismatch),
 }
 
 impl core::fmt::Display for ErrorCause {
@@ -77,9 +102,12 @@ impl core::fmt::Display for ErrorCause {
                     leb128::InvalidEncoding::NoContinuation => Ok(()),
                 }
             }
+            Self::NameLength => f.write_str("expected name length"),
+            Self::NameContents(e) => e.print("UTF-8 encoded name", f),
+            Self::NameEncoding(e) => write!(f, "invalid name encoding: {e}"),
             Self::SectionId => f.write_str("missing section ID byte"),
-            Self::SectionLength => f.write_str("missing section content length"),
-            Self::SectionContents { expected, actual } => write!(f, "expected {expected} bytes of section contents, but there were {actual} bytes remaining"),
+            Self::SectionLength => f.write_str("expected section content length"),
+            Self::SectionContents(e) => e.print("section contents", f),
         }
     }
 }

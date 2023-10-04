@@ -46,10 +46,10 @@ impl<'a> Section<'a> {
             Err(nom::Err::Failure(E::from_error_kind_and_cause(
                 input,
                 ErrorKind::Eof,
-                ErrorCause::SectionContents {
+                ErrorCause::SectionContents(crate::error::LengthMismatch {
                     expected: length,
                     actual: input.len().try_into().unwrap_or(u32::MAX),
-                },
+                }),
             )))
         }
     }

@@ -5,7 +5,7 @@ mod cause;
 
 pub(crate) use add_cause::AddCause;
 
-pub use cause::ErrorCause;
+pub use cause::{ErrorCause, LengthMismatch};
 pub use nom::error::ErrorKind;
 
 /// Default error type, which trackes an error's location, the kind of error that occured, and why
