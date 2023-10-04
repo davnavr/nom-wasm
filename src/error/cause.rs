@@ -22,28 +22,21 @@ impl LengthMismatch {
 /// Describes why a parser error occured.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
+#[allow(missing_docs)]
 pub enum ErrorCause {
-    #[allow(missing_docs)]
     PreambleMagic(arrayvec::ArrayVec<u8, 4>),
-    #[allow(missing_docs)]
     PreambleVersion(Option<u32>),
-    #[allow(missing_docs)]
     Leb128 {
         destination: leb128::Destination,
         reason: leb128::InvalidEncoding,
     },
-    #[allow(missing_docs)]
     NameLength,
-    #[allow(missing_docs)]
     NameContents(LengthMismatch),
-    #[allow(missing_docs)]
     NameEncoding(core::str::Utf8Error),
-    #[allow(missing_docs)]
     SectionId,
-    #[allow(missing_docs)]
     SectionLength,
-    #[allow(missing_docs)]
     SectionContents(LengthMismatch),
+    CustomSectionName,
 }
 
 impl core::fmt::Display for ErrorCause {
@@ -108,6 +101,7 @@ impl core::fmt::Display for ErrorCause {
             Self::SectionId => f.write_str("missing section ID byte"),
             Self::SectionLength => f.write_str("expected section content length"),
             Self::SectionContents(e) => e.print("section contents", f),
+            Self::CustomSectionName => f.write_str("expected custom section name"),
         }
     }
 }

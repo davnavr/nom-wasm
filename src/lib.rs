@@ -19,6 +19,7 @@ extern crate alloc;
 
 pub use nom;
 
+pub mod custom;
 pub mod error;
 pub mod leb128;
 pub mod module;
