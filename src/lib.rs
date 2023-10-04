@@ -22,7 +22,7 @@ pub use nom;
 pub mod error;
 pub mod leb128;
 pub mod module;
-//pub mod section;
+pub mod section;
 
 /// Type alias for the result of parsing functions in [`nom-wasm`](crate).
 pub type Parsed<'a, T, E = error::Error<'a>> = nom::IResult<&'a [u8], T, E>;

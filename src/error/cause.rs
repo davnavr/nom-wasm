@@ -13,6 +13,12 @@ pub enum ErrorCause {
         destination: leb128::Destination,
         reason: leb128::InvalidEncoding,
     },
+    #[allow(missing_docs)]
+    SectionId,
+    #[allow(missing_docs)]
+    SectionLength,
+    #[allow(missing_docs)]
+    SectionContents { expected: u32, actual: u32 },
 }
 
 impl core::fmt::Display for ErrorCause {
@@ -71,6 +77,9 @@ impl core::fmt::Display for ErrorCause {
                     leb128::InvalidEncoding::NoContinuation => Ok(()),
                 }
             }
+            Self::SectionId => f.write_str("missing section ID byte"),
+            Self::SectionLength => f.write_str("missing section content length"),
+            Self::SectionContents { expected, actual } => write!(f, "expected {expected} bytes of section contents, but there were {actual} bytes remaining"),
         }
     }
 }
