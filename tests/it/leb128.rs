@@ -1,11 +1,11 @@
-use nom_wasm::{error::Error, leb128};
+use nom_wasm::{error::VerboseError, leb128};
 
 #[test]
 fn valid_u32() {
     macro_rules! assert_eq_decoded {
         ($expected:expr, $input:expr) => {
             assert_eq!(
-                leb128::u32::<Error>(&$input),
+                leb128::u32::<VerboseError>(&$input),
                 Ok(([].as_slice(), $expected))
             );
         };

@@ -2,13 +2,15 @@
 
 mod add_cause;
 mod cause;
+mod verbose_error;
 
 pub(crate) use add_cause::AddCause;
 
 pub use cause::{ErrorCause, LengthMismatch};
 pub use nom::error::ErrorKind;
+pub use verbose_error::VerboseError;
 
-/// Default error type, which trackes an error's location, the kind of error that occured, and why
+/// Default error type, which tracks an error's location, the kind of error that occured, and why
 /// it occured.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
