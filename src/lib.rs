@@ -24,6 +24,7 @@ pub mod error;
 pub mod leb128;
 pub mod module;
 pub mod name;
+pub mod ordering;
 pub mod section;
 
 /// Type alias for the result of parsing functions in [`nom-wasm`](crate).
