@@ -68,6 +68,13 @@ pub enum ErrorCause {
     CustomSectionName,
     PreambleMagic(arrayvec::ArrayVec<u8, 4>),
     PreambleVersion(Option<u32>),
+    /// A [`BlockType`](crate::types::BlockType) could not be parsed.
+    /// - Contains `None` if the end of input was unexpectedly encountered.
+    /// - Contains `Some` negative value if an unrecognized encoding for a type was encountered.
+    /// - Contains `Some` positive value if the parsed [`typeidx`] was too large.
+    ///
+    /// [`typeidx`]: crate::module::TypeIdx
+    BlockType(Option<core::num::NonZeroI64>),
 }
 
 const _SIZE_CHECK: () = if core::mem::size_of::<ErrorCause>() > 16 {
@@ -137,6 +144,14 @@ impl Display for ErrorCause {
             Self::PreambleVersion(Some(actual)) => {
                 let expected = u32::from_le_bytes(crate::module::preamble::RECOGNIZED_VERSION);
                 write!(f, "expected WASM preamble version {expected} ({expected:#010X}), but got {actual} ({actual:#010X})")
+            }
+            Self::BlockType(None) => f.write_str("expected block type tag or index"),
+            Self::BlockType(Some(block_type)) => {
+                if block_type.get() < 0 {
+                    write!(f, "{block_type} is not a valid value type or block type")
+                } else {
+                    write!(f, "type index in block type {block_type} is too large, maximum 32-bit value is {}", u32::MAX)
+                }
             }
         }
     }
