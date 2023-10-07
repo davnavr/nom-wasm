@@ -21,6 +21,7 @@ pub use nom;
 
 pub mod custom;
 pub mod error;
+pub mod input;
 pub mod leb128;
 pub mod module;
 pub mod name;

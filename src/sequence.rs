@@ -1,7 +1,6 @@
 //! Traits for parsing sequences of items.
 
-use crate::error::ErrorSource;
-use nom::Err;
+use crate::{error::ErrorSource, input::Result};
 
 /// Trait for a sequence of items that can be parsed.
 ///
@@ -16,7 +15,7 @@ pub trait Sequence<'a, E: ErrorSource<'a>> {
     ///
     /// If all items have already been parsed, or a previous call returned `Some(Err(_))`, then
     /// `None` if returned.
-    fn next(&mut self) -> Option<Result<Self::Item, Err<E>>>;
+    fn next(&mut self) -> Option<Result<Self::Item, E>>;
 
     /// Returns an estimate of the remaining number of items in the sequence.
     ///
@@ -48,7 +47,7 @@ where
     type Item = S::Item;
 
     #[inline]
-    fn next(&mut self) -> Option<Result<S::Item, Err<E>>> {
+    fn next(&mut self) -> Option<Result<S::Item, E>> {
         S::next(self)
     }
 
@@ -107,7 +106,7 @@ where
     S: Sequence<'a, E>,
     E: ErrorSource<'a>,
 {
-    type Item = Result<S::Item, Err<E>>;
+    type Item = Result<S::Item, E>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
