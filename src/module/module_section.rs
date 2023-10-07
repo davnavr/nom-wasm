@@ -1,3 +1,5 @@
+use crate::module;
+
 macro_rules! module_sections {
     ($(
         $(#[$meta:meta])*
@@ -5,9 +7,9 @@ macro_rules! module_sections {
     )+) => {
         /// Represents a well-known WebAssembly [`Module`] [*section*] or a [`CustomSection`].
         ///
-        /// [`Module`]: crate::module::Module
+        /// [`Module`]: module::Module
         /// [*section*]: https://webassembly.github.io/spec/core/binary/modules.html#sections
-        /// [`CustomSection`]: crate::custom::CustomSection
+        /// [`CustomSection`]: module::custom::CustomSection
         #[derive(Clone, Debug)]
         #[non_exhaustive]
         pub enum ModuleSection<'a> {$(
@@ -16,7 +18,7 @@ macro_rules! module_sections {
         )+}
 
         $crate::tag::enumeration! {
-            /// Represents the [*id*] of a WebAssembly [`ModuleSection`](crate::module::ModuleSection).
+            /// Represents the [*id*] of a WebAssembly [`ModuleSection`](module::ModuleSection).
             ///
             /// [*id*]: https://webassembly.github.io/spec/core/binary/modules.html#sections
             #[non_exhaustive]
@@ -46,5 +48,5 @@ module_sections! {
     /// anywhere within a module.
     ///
     /// [*custom section*]: https://webassembly.github.io/spec/core/binary/modules.html#binary-customsec
-    Custom(crate::custom::CustomSection<'a>) = 0, // TODO: Move custom module to be crate::module::custom
+    Custom(module::custom::CustomSection<'a>) = 0, // TODO: Move custom module to be crate::module::custom
 }

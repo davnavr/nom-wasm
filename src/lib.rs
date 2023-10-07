@@ -21,7 +21,6 @@ pub use nom;
 
 mod tag;
 
-pub mod custom;
 pub mod error;
 pub mod index;
 pub mod input;

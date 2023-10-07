@@ -1,7 +1,8 @@
-//! Types and functions for parsing WebAssembly [modules encodded in the binary format].
+//! Types and functions for parsing WebAssembly [modules encoded in the binary format].
 //!
-//! [modules encodded in the binary format]: https://webassembly.github.io/spec/core/binary/modules.html#binary-module
+//! [modules encoded in the binary format]: https://webassembly.github.io/spec/core/binary/modules.html#binary-module
 
+pub mod custom;
 pub mod preamble;
 
 mod core_indices;
