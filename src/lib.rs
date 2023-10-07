@@ -19,6 +19,8 @@ extern crate alloc;
 
 pub use nom;
 
+mod tag;
+
 pub mod custom;
 pub mod error;
 pub mod input;

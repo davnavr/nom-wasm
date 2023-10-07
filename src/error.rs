@@ -4,11 +4,11 @@ mod add_cause;
 mod cause;
 mod verbose_error;
 
-pub(crate) use add_cause::AddCause;
-
-pub use cause::{ErrorCause, LengthMismatch};
+pub use cause::{ErrorCause, InvalidTag, LengthMismatch};
 pub use nom::error::ErrorKind;
 pub use verbose_error::VerboseError;
+
+pub(crate) use add_cause::AddCause;
 
 /// Default error type, which tracks an error's location, the kind of error that occured, and why
 /// it occured.
