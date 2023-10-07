@@ -60,7 +60,7 @@ where
 /// Wraps a [`Sequence`] to use it as an [`Iterator`].
 #[derive(Clone, Debug)]
 #[repr(transparent)]
-pub struct Iter<'a, S, E>
+pub struct Iter<'a, S, E = crate::error::Error<'a>>
 where
     S: Sequence<'a, E>,
     E: ErrorSource<'a>,

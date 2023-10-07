@@ -11,6 +11,10 @@ use crate::{
 };
 use nom::ToUsize;
 
+mod section_sequence;
+
+pub use section_sequence::SectionSequence;
+
 /// Represents a [WebAssembly section], typically a [section within a module].
 ///
 /// [WebAssembly section]: https://webassembly.github.io/spec/core/binary/modules.html#sections
