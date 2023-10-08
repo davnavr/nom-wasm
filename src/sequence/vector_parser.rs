@@ -23,6 +23,17 @@ where
     _marker: core::marker::PhantomData<fn() -> Parsed<'a, T, E>>,
 }
 
+impl<'a, T, E, P> Default for VectorParser<'a, T, E, P>
+where
+    E: ErrorSource<'a>,
+    P: Parser<&'a [u8], T, E> + Default,
+{
+    #[inline]
+    fn default() -> Self {
+        Self::new(&[], 0, P::default())
+    }
+}
+
 impl<'a, T, E, P> VectorParser<'a, T, E, P>
 where
     E: ErrorSource<'a>,
