@@ -1,9 +1,10 @@
 use crate::{
     error::{AddCause, ErrorCause, ErrorKind, ErrorSource},
-    leb128,
+    leb128, sequence,
     types::{self, BlockType, ValType},
     Parsed,
 };
+use nom::Parser;
 
 impl BlockType {
     /// Parses a [`BlockType`].
@@ -78,3 +79,20 @@ impl ValType {
         }
     }
 }
+
+/// Provides an explicit [`Parser`] implementation for [`ValType::parse()`].
+#[derive(Clone, Copy, Debug, Default)]
+#[non_exhaustive]
+pub struct ParseValType;
+
+impl<'a, E: ErrorSource<'a>> Parser<&'a [u8], ValType, E> for ParseValType {
+    #[inline]
+    fn parse(&mut self, input: &'a [u8]) -> nom::IResult<&'a [u8], ValType, E> {
+        ValType::parse(input)
+    }
+}
+
+/// Represents a WebAssembly [result type].
+///
+/// [result type]: https://webassembly.github.io/spec/core/binary/types.html#result-types
+pub type ResultType<'a, E> = sequence::VectorParser<'a, ValType, E, ParseValType>;

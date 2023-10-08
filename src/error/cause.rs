@@ -21,27 +21,33 @@ impl LengthMismatch {
 
 /// Error type used when a byte or 32-bit enumeration value was invalid.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[allow(missing_docs)]
 #[non_exhaustive]
 pub enum InvalidTag {
     /// An invalid [`ModuleSectionId`](crate::module::ModuleSectionId).
-    ModuleSectionId(u8),
+    ModuleSectionId(Option<u8>),
+    #[allow(missing_docs)]
+    FuncType(Option<u8>),
 }
 
 impl Display for InvalidTag {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let (value, value_width) = match self {
-            Self::ModuleSectionId(b) => (u32::from(*b), 4),
+            Self::ModuleSectionId(b) | Self::FuncType(b) => (b.map(u32::from), 4),
         };
 
         let name = match self {
             Self::ModuleSectionId(_) => "module section ID",
+            Self::FuncType(_) => "function type",
         };
 
-        write!(
-            f,
-            "the {name} tag {value:#0value_width$X} ({value}) are invalid"
-        )
+        if let Some(value) = value {
+            write!(
+                f,
+                "the {name} tag {value:#0value_width$X} ({value}) is invalid"
+            )
+        } else {
+            write!(f, "missing {name} tag")
+        }
     }
 }
 

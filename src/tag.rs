@@ -42,7 +42,7 @@ macro_rules! enumeration {
                 if let Some(ok) = Self::new(tag) {
                     Ok(ok)
                 } else {
-                    Err(<Self::Error>::$enum_name(tag))
+                    Err(<Self::Error>::$enum_name(Some(tag)))
                 }
             }
         }

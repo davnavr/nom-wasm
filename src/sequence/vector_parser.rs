@@ -38,14 +38,8 @@ where
         }
     }
 
-    /// Parses a [*LEB128*](crate::leb128) encoded unsigned 32-bit length for a vector whose items
-    /// are parsed by the given [`Parser`].
-    ///
-    /// # Errors
-    ///
-    /// Returns an error from an [`ErrorCause::VectorLength`] if the vector length could not be
-    /// parsed.
-    pub fn parse_length_32(input: &'a [u8], parser: P) -> Result<Self, E> {
+    //pub
+    fn parse_length_32_with(input: &'a [u8], parser: P) -> Result<Self, E> {
         let (input, length) = crate::leb128::u32(input).add_cause(ErrorCause::VectorLength)?;
         Ok(Self::new(input, nom::ToUsize::to_usize(&length), parser))
     }
@@ -53,8 +47,27 @@ where
     /// Parses all of the remaining items in the vector, ignoring the results of the underlying
     /// [`Parser`],
     pub fn finish(mut self) -> crate::Parsed<'a, P, E> {
+        // TODO: Move this to a default method in Vector trait
         while self.next().is_some() {}
         Ok((self.input, self.parser))
+    }
+}
+
+impl<'a, T, E, P> VectorParser<'a, T, E, P>
+where
+    E: ErrorSource<'a>,
+    P: Parser<&'a [u8], T, E> + Default,
+{
+    /// Parses a [*LEB128*](crate::leb128) encoded unsigned 32-bit length for a vector whose items
+    /// are parsed by the given [`Parser`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error from an [`ErrorCause::VectorLength`] if the vector length could not be
+    /// parsed.
+    #[inline]
+    pub fn parse_length_32(input: &'a [u8]) -> Result<Self, E> {
+        Self::parse_length_32_with(input, P::default())
     }
 }
 
