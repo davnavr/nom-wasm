@@ -1,7 +1,7 @@
 use crate::{
     error::{self, ErrorSource},
     input::Result,
-    types::{ResultType, ValType},
+    types::ResultType,
 };
 
 /// Trait for parsing a WebAssembly [function type].
@@ -40,6 +40,8 @@ where
         P::results(self, results)
     }
 }
+
+impl<'a, E: ErrorSource<'a>> ParseFuncType<'a, E> for () {}
 
 const _OBJECT_SAFE: core::marker::PhantomData<&'static dyn ParseFuncType<'static, ()>> =
     core::marker::PhantomData;

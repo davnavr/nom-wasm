@@ -1,4 +1,4 @@
-//! Types representing and functions for parsing
+//! Types representing, and traits and functions for parsing,
 //! [WebAssembly types](https://webassembly.github.io/spec/core/binary/types.html).
 
 mod func_type;
