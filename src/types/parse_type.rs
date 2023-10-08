@@ -52,3 +52,29 @@ impl BlockType {
         Ok((input, block_type))
     }
 }
+
+impl ValType {
+    /// Parses a [`ValType`].
+    ///
+    /// See [`BlockType::parse()`] for more information.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the [`BlockType`] could not be parsed, or if a [`BlockType::Empty`] or
+    /// [`BlockType::Index`] was parsed.
+    pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
+        match BlockType::parse(input)? {
+            (input, BlockType::Inline(val_type)) => Ok((input, val_type)),
+            (_, BlockType::Empty) => Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                input,
+                ErrorKind::Verify,
+                ErrorCause::ValType(None),
+            ))),
+            (_, BlockType::Index(index)) => Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                input,
+                ErrorKind::Verify,
+                ErrorCause::ValType(Some(index)),
+            ))),
+        }
+    }
+}

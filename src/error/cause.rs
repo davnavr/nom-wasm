@@ -59,12 +59,16 @@ pub enum ErrorCause {
         reason: leb128::InvalidEncoding,
     },
     InvalidTag(InvalidTag),
+    #[non_exhaustive]
     NameLength,
     NameContents(LengthMismatch),
     NameEncoding(core::str::Utf8Error),
+    #[non_exhaustive]
     SectionId,
+    #[non_exhaustive]
     SectionLength,
     SectionContents(LengthMismatch),
+    #[non_exhaustive]
     CustomSectionName,
     PreambleMagic(arrayvec::ArrayVec<u8, 4>),
     PreambleVersion(Option<u32>),
@@ -75,6 +79,14 @@ pub enum ErrorCause {
     ///
     /// [`typeidx`]: crate::module::TypeIdx
     BlockType(Option<core::num::NonZeroI64>),
+    /// A [`ValType`](crate::types::ValType) was not valid.
+    ///
+    /// - Contains `None` if a [`BlockType::Empty`] was parsed.
+    /// - Contains `Some` type index if a [`BlockType::Index`] was parsed.
+    ///
+    /// [`BlockType::Empty`]: crate::types::BlockType::Empty
+    /// [`BlockType::Index`]: crate::types::BlockType::Index
+    ValType(Option<crate::module::TypeIdx>),
 }
 
 const _SIZE_CHECK: () = if core::mem::size_of::<ErrorCause>() > 16 {
@@ -145,7 +157,7 @@ impl Display for ErrorCause {
                 let expected = u32::from_le_bytes(crate::module::preamble::RECOGNIZED_VERSION);
                 write!(f, "expected WASM preamble version {expected} ({expected:#010X}), but got {actual} ({actual:#010X})")
             }
-            Self::BlockType(None) => f.write_str("expected block type tag or index"),
+            Self::BlockType(None) => f.write_str("expected valtype, typeidx, or empty block type"),
             Self::BlockType(Some(block_type)) => {
                 if block_type.get() < 0 {
                     write!(f, "{block_type} is not a valid value type or block type")
@@ -153,6 +165,8 @@ impl Display for ErrorCause {
                     write!(f, "type index in block type {block_type} is too large, maximum 32-bit value is {}", u32::MAX)
                 }
             }
+            Self::ValType(None) => f.write_str("expected valtype but got empty block type"),
+            Self::ValType(Some(index)) => write!(f, "expected valtype but got type index {index}"),
         }
     }
 }
