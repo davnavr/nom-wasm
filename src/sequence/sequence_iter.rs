@@ -4,7 +4,6 @@ use crate::{
 };
 
 /// Wraps a [`Sequence`] to use it as an [`Iterator`].
-#[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Iter<'a, S, E = crate::error::Error<'a>>
 where
@@ -80,5 +79,26 @@ where
     #[inline]
     fn len(&self) -> usize {
         S::expected_len(&self.sequence)
+    }
+}
+
+impl<'a, S, E> Clone for Iter<'a, S, E>
+where
+    S: Vector<'a, E> + Clone,
+    E: ErrorSource<'a>,
+{
+    #[inline]
+    fn clone(&self) -> Self {
+        Self::wrap(self.sequence.clone())
+    }
+}
+
+impl<'a, S, E> core::fmt::Debug for Iter<'a, S, E>
+where
+    S: Vector<'a, E> + core::fmt::Debug,
+    E: ErrorSource<'a>,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("Iter").field(&self.sequence).finish()
     }
 }
