@@ -27,7 +27,7 @@ impl<'a> CustomSection<'a> {
     /// The byte [*id*] for custom sections in a WebAssembly module.
     ///
     /// [*id*]: Section::id
-    pub const ID: u8 = 0;
+    pub const ID: u8 = crate::module::ModuleSectionId::Custom as u8;
 
     /// Parses a custom section from a [`Section`]'s [`contents`].
     ///

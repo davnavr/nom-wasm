@@ -48,5 +48,9 @@ module_sections! {
     /// anywhere within a module.
     ///
     /// [*custom section*]: https://webassembly.github.io/spec/core/binary/modules.html#binary-customsec
-    Custom(module::custom::CustomSection<'a>) = 0, // TODO: Move custom module to be crate::module::custom
+    Custom(module::custom::CustomSection<'a>) = 0,
+    /// The [*type section*].
+    ///
+    /// [*type section*]: https://webassembly.github.io/spec/core/binary/modules.html#type-section
+    Type(module::TypeSec<'a>) = 1 impl From,
 }
