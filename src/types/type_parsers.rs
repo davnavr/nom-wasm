@@ -83,9 +83,9 @@ impl ValType {
 /// Provides an explicit [`Parser`] implementation for [`ValType::parse()`].
 #[derive(Clone, Copy, Debug, Default)]
 #[non_exhaustive]
-pub struct ParseValType;
+pub struct ValTypeParser;
 
-impl<'a, E: ErrorSource<'a>> Parser<&'a [u8], ValType, E> for ParseValType {
+impl<'a, E: ErrorSource<'a>> Parser<&'a [u8], ValType, E> for ValTypeParser {
     #[inline]
     fn parse(&mut self, input: &'a [u8]) -> nom::IResult<&'a [u8], ValType, E> {
         ValType::parse(input)
@@ -95,4 +95,4 @@ impl<'a, E: ErrorSource<'a>> Parser<&'a [u8], ValType, E> for ParseValType {
 /// Represents a WebAssembly [result type].
 ///
 /// [result type]: https://webassembly.github.io/spec/core/binary/types.html#result-types
-pub type ResultType<'a, E> = sequence::VectorParser<'a, ValType, E, ParseValType>;
+pub type ResultType<'a, E> = sequence::VectorParser<'a, ValType, E, ValTypeParser>;
