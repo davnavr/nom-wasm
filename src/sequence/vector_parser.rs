@@ -4,6 +4,7 @@ use crate::{
     sequence::{self, Sequence},
     Parsed,
 };
+use core::fmt::Debug;
 use nom::Parser;
 
 /// Represents a [vector] in the binary format, which is a [`Sequence`] of items that can be
@@ -154,16 +155,15 @@ where
     }
 }
 
-impl<'a, T, E, P> core::fmt::Debug for VectorParser<'a, T, E, P>
+impl<'a, T, E, P> Debug for VectorParser<'a, T, E, P>
 where
-    E: ErrorSource<'a>,
-    P: Parser<&'a [u8], T, E> + core::fmt::Debug,
+    E: ErrorSource<'a> + Debug + 'a,
+    P: Parser<&'a [u8], T, E> + Clone,
+    T: Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("VectorParser")
-            .field("remaining", &self.remaining)
-            .field("parser", &self.parser)
-            .field("input", &self.input)
+        f.debug_list()
+            .entries(self.clone().into_iter().map(crate::debug::FmtResult))
             .finish()
     }
 }
