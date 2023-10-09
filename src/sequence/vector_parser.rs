@@ -10,7 +10,6 @@ use nom::Parser;
 /// decoded by applying a [`Parser`] multiple times.
 ///
 /// [vector]: https://webassembly.github.io/spec/core/binary/conventions.html#vectors
-#[derive(Clone, Debug)]
 #[must_use = "items are parsed lazily, call Sequence::next or VectorParser::finish"]
 pub struct VectorParser<'a, T, E, P>
 where
@@ -69,8 +68,13 @@ where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E> + Default,
 {
-    /// Parses a [*LEB128*](crate::leb128) encoded unsigned 32-bit length for a vector whose items
-    /// are parsed by the given [`Parser`].
+    /// Creates a vector with `length` items that are parsed from the given `input`.
+    #[inline]
+    pub fn with_length_32(length: u32, input: &'a [u8]) -> Self {
+        Self::new(input, nom::ToUsize::to_usize(&length), P::default())
+    }
+
+    /// Parses a [*LEB128*](crate::leb128) encoded unsigned 32-bit length for a vector.
     ///
     /// # Errors
     ///
@@ -136,5 +140,41 @@ where
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         sequence::Iter::wrap(self)
+    }
+}
+
+impl<'a, T, E, P> Clone for VectorParser<'a, T, E, P>
+where
+    E: ErrorSource<'a>,
+    P: Parser<&'a [u8], T, E> + Clone,
+{
+    #[inline]
+    fn clone(&self) -> Self {
+        Self::new(self.input, self.remaining, self.parser.clone())
+    }
+}
+
+impl<'a, T, E, P> core::fmt::Debug for VectorParser<'a, T, E, P>
+where
+    E: ErrorSource<'a>,
+    P: Parser<&'a [u8], T, E> + core::fmt::Debug,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("VectorParser")
+            .field("remaining", &self.remaining)
+            .field("parser", &self.parser)
+            .field("input", &self.input)
+            .finish()
+    }
+}
+
+impl<'a, T, E, P> crate::input::AsInput<'a> for VectorParser<'a, T, E, P>
+where
+    E: ErrorSource<'a>,
+    P: Parser<&'a [u8], T, E>,
+{
+    #[inline]
+    fn as_input(&self) -> &'a [u8] {
+        self.input
     }
 }
