@@ -6,7 +6,7 @@ mod type_parsers;
 mod val_type;
 
 pub use crate::module::TypeIdx;
-pub use func_type::{func_type, ParseFuncType};
+pub use func_type::{func_type, FuncTypeParser, ParseFuncType};
 pub use type_parsers::{ResultType, ValTypeParser};
 pub use val_type::{BlockType, NumType, RefType, ValType, VecType};
 
