@@ -39,7 +39,7 @@ where
     P: Parser<&'a [u8], T, E>,
 {
     #[inline]
-    fn new(input: &'a [u8], remaining: usize, parser: P) -> Self {
+    pub(crate) fn new(input: &'a [u8], remaining: usize, parser: P) -> Self {
         Self {
             input,
             remaining,
