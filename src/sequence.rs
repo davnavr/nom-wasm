@@ -62,3 +62,33 @@ where
         S::size_hint(self)
     }
 }
+
+macro_rules! wrap_sequence_impl {
+    (
+        for<$lt:lifetime, $error:ident $(, $conditions:tt)?>
+            $implementor:ty[$sequence:ident: $wrapped:ty]
+        $(
+            where $($where_clause:tt)+
+        )?
+    ) => {
+        impl<$lt, $error $(, $conditions)?> crate::sequence::Sequence<$lt, $error> for $implementor
+        where
+            $error: ErrorSource<$lt>,
+            $($($where_clause)+)?
+        {
+            type Item = <$wrapped as crate::sequence::Sequence<$lt, $error>>::Item;
+
+            #[inline]
+            fn next(&mut self) -> Option<crate::input::Result<Self::Item, E>> {
+                crate::sequence::Sequence::next(&mut self.$sequence)
+            }
+
+            #[inline]
+            fn size_hint(&self) -> (usize, Option<usize>) {
+                crate::sequence::Sequence::size_hint(&self.$sequence)
+            }
+        }
+    };
+}
+
+pub(crate) use wrap_sequence_impl;

@@ -4,6 +4,8 @@ use crate::{
     types::{FuncTypeParser, ParseFuncType},
 };
 
+type FuncTypeVectorParser<'a, P, E> = VectorParser<'a, (), E, FuncTypeParser<'a, P, E>>;
+
 /// Represents the [**types** component] of a WebAssembly module, a [`Sequence`] of
 /// [function types] encoded in the [`TypeSec`]tion.
 ///
@@ -15,7 +17,7 @@ where
     P: ParseFuncType<'a, E>,
     E: ErrorSource<'a>,
 {
-    types: VectorParser<'a, (), E, FuncTypeParser<'a, P, E>>,
+    types: FuncTypeVectorParser<'a, P, E>,
 }
 
 impl<'a, P, E> TypesComponent<'a, P, E>
@@ -24,14 +26,18 @@ where
     E: ErrorSource<'a>,
 {
     #[inline]
-    fn new(types: VectorParser<'a, (), E, FuncTypeParser<'a, P, E>>) -> Self {
+    fn new(types: FuncTypeVectorParser<'a, P, E>) -> Self {
         Self { types }
     }
 
     //fn finish
 }
 
-//Sequence
+sequence::wrap_sequence_impl! {
+    for<'a, E, P> TypesComponent<'a, P, E>[types: FuncTypeVectorParser<'a, P, E>]
+    where
+        P: ParseFuncType<'a, E>,
+}
 
 //Vector
 
