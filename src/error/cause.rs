@@ -27,17 +27,22 @@ pub enum InvalidTag {
     ModuleSectionId(Option<u8>),
     #[allow(missing_docs)]
     FuncType(Option<u8>),
+    /// An invalid [`ImportDesc`](crate::module::ImportDesc).
+    ImportDesc(Option<u8>),
 }
 
 impl Display for InvalidTag {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let (value, value_width) = match self {
-            Self::ModuleSectionId(b) | Self::FuncType(b) => (b.map(u32::from), 4),
+            Self::ModuleSectionId(b) | Self::FuncType(b) | Self::ImportDesc(b) => {
+                (b.map(u32::from), 4)
+            }
         };
 
         let name = match self {
             Self::ModuleSectionId(_) => "module section ID",
             Self::FuncType(_) => "function type",
+            Self::ImportDesc(_) => "import desc",
         };
 
         if let Some(value) = value {
@@ -119,6 +124,24 @@ impl core::fmt::Display for LimitsComponent {
     }
 }
 
+/// Indicates which field of an [`Import`](crate::module::Import) could not be parsed.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+#[allow(missing_docs)]
+pub enum ImportComponent {
+    Module,
+    Name,
+}
+
+impl core::fmt::Display for ImportComponent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            Self::Module => "module name",
+            Self::Name => "import name",
+        })
+    }
+}
+
 /// Describes why a parser error occured.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
@@ -173,6 +196,11 @@ pub enum ErrorCause {
     GlobalType,
     #[non_exhaustive]
     TagType,
+    #[non_exhaustive]
+    ImportDesc {
+        kind: u8,
+    },
+    Import(ImportComponent),
 }
 
 const _SIZE_CHECK: () = if core::mem::size_of::<ErrorCause>() > 16 {
@@ -271,6 +299,8 @@ impl Display for ErrorCause {
             Self::TableType => f.write_str("could not parse table type"),
             Self::GlobalType => f.write_str("could not parse global type"),
             Self::TagType => f.write_str("could not parse tag type"),
+            Self::ImportDesc { kind } => write!(f, "error parsing importdesc kind {kind:#04X}"),
+            Self::Import(field) => write!(f, "could not parse import: missing {field}"),
         }
     }
 }

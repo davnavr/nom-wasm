@@ -5,7 +5,8 @@ mod cause;
 mod verbose_error;
 
 pub use cause::{
-    ErrorCause, InvalidFlags, InvalidFlagsValue, InvalidTag, LengthMismatch, LimitsComponent,
+    ErrorCause, ImportComponent, InvalidFlags, InvalidFlagsValue, InvalidTag, LengthMismatch,
+    LimitsComponent,
 };
 pub use nom::error::ErrorKind;
 pub use verbose_error::VerboseError;
