@@ -2,29 +2,17 @@ alias c := clippy_cfg_std
 alias clippy := clippy_all_cfgs
 alias d := doc
 alias f := fmt
-alias t := test_cfg_std
-alias test := test_all_cfgs
+alias t := test
 
 cfg_no_alloc := "--no-default-features --features arrayvec"
 cfg_no_std := cfg_no_alloc + " --features alloc"
 
-# Invokes fmt, clippy, and runs all tests for all configurations
-check: fmt clippy_all_cfgs test_all_cfgs
+# Invokes fmt, clippy, then runs all unit tests
+check: fmt clippy_all_cfgs test
 
-# Runs tests for the full no_std configuration
-test_cfg_no_std $RUST_BACKTRACE="1":
-    cargo test {{cfg_no_alloc}}
-
-# Runs tests for the no_std + alloc configuration
-test_cfg_no_alloc $RUST_BACKTRACE="1":
-    cargo test {{cfg_no_std}}
-
-# Runs tests for the default configuration
-test_cfg_std $RUST_BACKTRACE="1":
+# Runs all unit tests
+test $RUST_BACKTRACE="1":
     cargo test
-
-# Runs tests for all 3 main configurations
-test_all_cfgs $RUST_BACKTRACE="1": (test_cfg_std RUST_BACKTRACE) (test_cfg_no_alloc RUST_BACKTRACE) (test_cfg_no_std RUST_BACKTRACE)
 
 # Invoke fmt on the main source code
 fmt *FLAGS='--all':
