@@ -42,7 +42,8 @@ impl<'a> Section<'a> {
             )));
         };
 
-        let (input, length) = crate::leb128::u32(input).add_cause(ErrorCause::SectionLength)?;
+        let (input, length) =
+            crate::values::leb128_u32(input).add_cause(ErrorCause::SectionLength)?;
 
         if let Some(contents) = input.get(..length.to_usize()) {
             Ok((&input[..length.to_usize()], Self { id, contents }))

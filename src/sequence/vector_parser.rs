@@ -51,7 +51,8 @@ where
 
     //pub
     fn parse_length_32_with(input: &'a [u8], parser: P) -> Result<Self, E> {
-        let (input, length) = crate::leb128::u32(input).add_cause(ErrorCause::VectorLength)?;
+        let (input, length) =
+            crate::values::leb128_u32(input).add_cause(ErrorCause::VectorLength)?;
         Ok(Self::new(input, nom::ToUsize::to_usize(&length), parser))
     }
 
@@ -75,7 +76,7 @@ where
         Self::new(input, nom::ToUsize::to_usize(&length), P::default())
     }
 
-    /// Parses a [*LEB128*](crate::leb128) encoded unsigned 32-bit length for a vector.
+    /// Parses a [*LEB128*](crate::values::leb128) encoded unsigned 32-bit length for a vector.
     ///
     /// # Errors
     ///

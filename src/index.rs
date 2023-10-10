@@ -22,10 +22,10 @@ pub trait Index:
     /// A human readable string that indicates what this [`Index`] refers to.
     const NAME: &'static str;
 
-    /// Parses a [*LEB128*](crate::leb128) encoded unsigned 32-bit integer [`Index`].
+    /// Parses a [*LEB128*](crate::values::leb128) encoded unsigned 32-bit integer [`Index`].
     #[inline]
     fn parse<'a, E: crate::error::ErrorSource<'a>>(input: &'a [u8]) -> crate::Parsed<'a, Self, E> {
-        crate::leb128::u32(input).map(|(input, index)| (input, Self::from(index)))
+        crate::values::leb128_u32(input).map(|(input, index)| (input, Self::from(index)))
     }
 }
 

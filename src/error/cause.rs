@@ -1,4 +1,4 @@
-use crate::leb128;
+use crate::values::leb128;
 use core::fmt::{Display, Formatter};
 
 /// Describes an [`ErrorCause`] where the length of some data was incorrect.

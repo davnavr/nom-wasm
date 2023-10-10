@@ -1,7 +1,8 @@
 use crate::{
     error::{AddCause, ErrorCause, ErrorKind, ErrorSource},
-    leb128, sequence,
+    sequence,
     types::{self, BlockType, ValType},
+    values::leb128,
     Parsed,
 };
 use nom::Parser;

@@ -25,13 +25,12 @@ mod tag;
 pub mod error;
 pub mod index;
 pub mod input;
-pub mod leb128;
 pub mod module;
-pub mod name;
 pub mod ordering;
 pub mod section;
 pub mod sequence;
 pub mod types;
+pub mod values;
 
 /// Type alias for the result of parsing functions in [`nom-wasm`](crate).
 pub type Parsed<'a, T, E = error::Error<'a>> = nom::IResult<&'a [u8], T, E>;

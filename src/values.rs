@@ -1,14 +1,22 @@
-//! Contains functions for parsing UTF-8 strings.
+//! Parsers recognizing common structures described in the WebAssembly binary format
+//! [conventions] and [values] specification.
+//!
+//! [conventions]: https://webassembly.github.io/spec/core/binary/conventions.html
+//! [values]: https://webassembly.github.io/spec/core/binary/values.html
 
 use crate::error::{AddCause as _, ErrorCause, ErrorKind, ErrorSource};
 use nom::ToUsize;
 
+pub mod leb128;
+
+pub use leb128::{s32 as leb128_s32, s64 as leb128_s64, u32 as leb128_u32, u64 as leb128_u64};
+
 /// Parses a [WebAssembly **name**] prefixed by a [*LEB128* length] from the given `input`.
 ///
 /// [WebAssembly **name**]: https://webassembly.github.io/spec/core/binary/values.html#names
-/// [*LEB128* length]: crate::leb128::u32
-pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> crate::Parsed<'a, &'a str, E> {
-    let (input, length) = crate::leb128::u32(input).add_cause(ErrorCause::SectionLength)?;
+/// [*LEB128* length]: leb128_u32
+pub fn name<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> crate::Parsed<'a, &'a str, E> {
+    let (input, length) = leb128_u32(input).add_cause(ErrorCause::SectionLength)?;
 
     if let Some(contents) = input.get(..length.to_usize()) {
         match core::str::from_utf8(contents) {

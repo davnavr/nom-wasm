@@ -1,4 +1,4 @@
-use nom_wasm::{error::VerboseError, leb128};
+use nom_wasm::{error::VerboseError, values::leb128};
 
 #[test]
 fn valid_u32() {

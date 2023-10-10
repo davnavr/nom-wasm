@@ -33,7 +33,7 @@ impl<'a> CustomSection<'a> {
     ///
     /// [`contents`]: Section::contents
     pub fn parse<E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
-        crate::name::parse(input)
+        crate::values::name(input)
             .add_cause(ErrorCause::CustomSectionName)
             .map(|(contents, name)| (contents, Self { name, contents }))
     }
