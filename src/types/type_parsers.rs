@@ -1,6 +1,6 @@
 use crate::{
-    error::{AddCause, ErrorCause, ErrorKind, ErrorSource},
-    types::{BlockType, ValType},
+    error::{self, AddCause, ErrorCause, ErrorKind, ErrorSource},
+    types::{self, BlockType, Limits, ValType},
     values::leb128,
     Parsed,
 };
@@ -89,5 +89,83 @@ impl<'a, E: ErrorSource<'a>> Parser<&'a [u8], ValType, E> for ValTypeParser {
     #[inline]
     fn parse(&mut self, input: &'a [u8]) -> nom::IResult<&'a [u8], ValType, E> {
         ValType::parse(input)
+    }
+}
+
+impl Limits {
+    #[allow(missing_docs)]
+    pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
+        let (input, flags) = if let Some((first, input)) = input.split_first() {
+            (input, *first)
+        } else {
+            return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                input,
+                ErrorKind::OneOf,
+                ErrorCause::InvalidFlags(error::InvalidFlags::Limits(
+                    error::InvalidFlagsValue::Missing,
+                )),
+            )));
+        };
+
+        const VALID_MASK: u8 = 0b111;
+
+        let invalid = flags & (!VALID_MASK);
+        if invalid != 0 {
+            return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                &input[..1],
+                ErrorKind::OneOf,
+                ErrorCause::InvalidFlags(error::InvalidFlags::Limits(
+                    error::InvalidFlagsValue::Invalid {
+                        value: flags,
+                        invalid,
+                    },
+                )),
+            )));
+        }
+
+        const USE_MEMORY_64: u8 = 0b100;
+        const HAS_MAXIMUM: u8 = 1;
+
+        let has_maximum = flags & HAS_MAXIMUM != 0;
+
+        macro_rules! parse_bounds {
+            ($parser:ident => $idx:ident) => {{
+                let index_type = types::IdxType::$idx;
+
+                let (input, min) = leb128::$parser(input).add_cause(ErrorCause::Limits {
+                    index_type,
+                    component: error::LimitsComponent::Minimum,
+                })?;
+
+                let (input, max) = if has_maximum {
+                    leb128::$parser(input)
+                        .add_cause(ErrorCause::Limits {
+                            index_type,
+                            component: error::LimitsComponent::Maximum,
+                        })
+                        .map(|(input, max)| (input, Some(max)))?
+                } else {
+                    (input, None)
+                };
+
+                (input, types::LimitBounds::$idx { min, max })
+            }};
+        }
+
+        let (input, bounds) = if flags & USE_MEMORY_64 == 0 {
+            parse_bounds!(u32 => I32)
+        } else {
+            parse_bounds!(u64 => I64) // memory64
+        };
+
+        const IS_SHARED: u8 = 0b10;
+
+        let share = if flags & IS_SHARED == 0 {
+            types::Sharing::Unshared
+        } else {
+            types::Sharing::Shared
+        };
+
+        Ok((input, Self { bounds, share }))
     }
 }

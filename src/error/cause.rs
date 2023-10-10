@@ -55,6 +55,63 @@ impl Display for InvalidTag {
 #[cfg(feature = "std")]
 impl std::error::Error for InvalidTag {}
 
+/// Used with [`InvalidFlags`] to indicate what values were invalid.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[allow(clippy::exhaustive_enums)]
+pub enum InvalidFlagsValue<V: Copy> {
+    /// The flags were parsed, but had invalid flags.
+    Invalid {
+        /// The flags value that *contains* the invalid flags.
+        value: V,
+        /// The flags that caused validation to fail.
+        invalid: V,
+    },
+    /// Flags could not be parsed.
+    Missing,
+}
+
+/// Error type used when a byte or 32-bit flags combination was invalid.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum InvalidFlags {
+    /// Invalid flags for [`Limits`](crate::types::Limits).
+    Limits(InvalidFlagsValue<u8>),
+}
+
+impl core::fmt::Display for InvalidFlags {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Limits(InvalidFlagsValue::Invalid { value, invalid }) => write!(
+                f,
+                "the limits flags {value:#04X} contains invalid flag(s): {invalid:#04X}"
+            ),
+            Self::Limits(InvalidFlagsValue::Missing) => f.write_str("missing limits flags"),
+        }
+    }
+}
+
+#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+#[cfg(feature = "std")]
+impl std::error::Error for InvalidFlags {}
+
+/// Indicates which part of a [`Limits`](crate::types::Limits) could not be parsed.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+#[allow(missing_docs)]
+pub enum LimitsComponent {
+    Minimum,
+    Maximum,
+}
+
+impl core::fmt::Display for LimitsComponent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            Self::Minimum => "minimum",
+            Self::Maximum => "maximum",
+        })
+    }
+}
+
 /// Describes why a parser error occured.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
@@ -65,6 +122,7 @@ pub enum ErrorCause {
         reason: leb128::InvalidEncoding,
     },
     InvalidTag(InvalidTag),
+    InvalidFlags(InvalidFlags),
     #[non_exhaustive]
     VectorLength,
     #[non_exhaustive]
@@ -95,6 +153,10 @@ pub enum ErrorCause {
     /// [`BlockType::Empty`]: crate::types::BlockType::Empty
     /// [`BlockType::Index`]: crate::types::BlockType::Index
     ValType(Option<crate::module::TypeIdx>),
+    Limits {
+        index_type: crate::types::IdxType,
+        component: LimitsComponent,
+    },
 }
 
 const _SIZE_CHECK: () = if core::mem::size_of::<ErrorCause>() > 16 {
@@ -132,6 +194,7 @@ impl Display for ErrorCause {
                 }
             }
             Self::InvalidTag(tag) => Display::fmt(tag, f),
+            Self::InvalidFlags(flags) => Display::fmt(flags, f),
             Self::VectorLength => f.write_str("expected item count prefix for vector"),
             Self::NameLength => f.write_str("expected name length"),
             Self::NameContents(e) => e.print("UTF-8 encoded name", f),
@@ -176,6 +239,17 @@ impl Display for ErrorCause {
             }
             Self::ValType(None) => f.write_str("expected valtype but got empty block type"),
             Self::ValType(Some(index)) => write!(f, "expected valtype but got type index {index}"),
+            Self::Limits {
+                index_type,
+                component,
+            } => {
+                f.write_str("could not parse ")?;
+                f.write_str(match index_type {
+                    crate::types::IdxType::I32 => "32",
+                    crate::types::IdxType::I64 => "64",
+                })?;
+                write!(f, "-bit integer {component} bound for limit")
+            }
         }
     }
 }

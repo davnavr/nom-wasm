@@ -4,7 +4,9 @@ mod add_cause;
 mod cause;
 mod verbose_error;
 
-pub use cause::{ErrorCause, InvalidTag, LengthMismatch};
+pub use cause::{
+    ErrorCause, InvalidFlags, InvalidFlagsValue, InvalidTag, LengthMismatch, LimitsComponent,
+};
 pub use nom::error::ErrorKind;
 pub use verbose_error::VerboseError;
 
