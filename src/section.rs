@@ -7,13 +7,10 @@
 
 use crate::{
     error::{AddCause as _, ErrorCause, ErrorKind, ErrorSource},
+    input::Result,
     Parsed,
 };
 use nom::ToUsize;
-
-mod section_sequence;
-
-pub use section_sequence::SectionSequence;
 
 /// Represents a [WebAssembly section], typically a [section within a module].
 ///
@@ -77,7 +74,17 @@ impl<'a> Section<'a> {
     */
 }
 
-//pub fn sequence<'a, E, T, F>(input: &'a [u8])
-//where
-//    F: FnMut(Section),
-//    E: ParseFailed<'a>
+/// Parses a sequence of WebAssembly [`Section`]s.
+pub fn sequence<'a, E, F>(mut input: &'a [u8], mut parser: F) -> Result<(), E>
+where
+    E: ErrorSource<'a>,
+    F: FnMut(Section<'a>) -> Result<(), E>,
+{
+    while !input.is_empty() {
+        let (remaining, section) = Section::parse(input)?;
+        parser(section)?;
+        input = remaining;
+    }
+
+    Ok(())
+}

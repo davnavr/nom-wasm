@@ -113,6 +113,8 @@ impl<'a> TypeSec<'a> {
     {
         TypesComponent::new(VectorParser::with_length_32(self.count, self.types))
     }
+
+    // TODO: add a pub fn parse_with that takes trait for parsing FuncTypes
 }
 
 impl<'a> AsInput<'a> for TypeSec<'a> {
@@ -124,6 +126,8 @@ impl<'a> AsInput<'a> for TypeSec<'a> {
 
 impl Debug for TypeSec<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        debug_types(nom::ToUsize::to_usize(&self.count), self.types, f)
+        //debug_types(nom::ToUsize::to_usize(&self.count), self.types, f)
+        // TODO: Pretty print the func types instead
+        f.debug_struct("TypeSec").field("count", &self.count).finish_non_exhaustive()
     }
 }

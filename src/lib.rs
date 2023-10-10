@@ -19,6 +19,7 @@ extern crate alloc;
 
 pub use nom;
 
+#[deprecated]
 mod debug;
 mod tag;
 
