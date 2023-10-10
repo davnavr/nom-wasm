@@ -8,14 +8,15 @@ use crate::{
     Parsed,
 };
 
-/// The 4-byte magic number, placed at the start of the preamble, which indicates that a file
+/// The 4-byte **`magic`** number, placed at the start of the preamble, which indicates that a file
 /// is a WebAssembly module.
 pub const MAGIC: [u8; 4] = *b"\0asm";
 
-/// The current version of the binary format supported by [`nom-wasm`], placed after the [`magic`] field.
+/// The current version of the binary format supported by [`nom-wasm`], placed after the
+/// [**`magic`**] field.
 ///
 /// [`nom-wasm`]: crate
-/// [`magic`]: MAGIC
+/// [**`magic`**]: MAGIC
 pub const RECOGNIZED_VERSION: [u8; 4] = 1u32.to_le_bytes();
 
 fn parse_magic<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, (), E> {
@@ -28,7 +29,7 @@ fn parse_magic<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, (), E> {
         })
 }
 
-/// Parses a module preamble, checking that the contents of its `version` field matches the
+/// Parses a module preamble, checking that the contents of its **`version`** field matches the
 /// [`RECOGNIZED_VERSION`].
 ///
 /// To handle different version values, use [`parse_any()`].
@@ -45,7 +46,7 @@ pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, (), E> {
         })
 }
 
-/// Parses a module preamble, returning the contents of its `version` field.
+/// Parses a module preamble, returning the contents of its **`version`** field.
 ///
 /// If you don't want to handle special version values, use [`parse()`] instead.
 pub fn parse_any<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, [u8; 4], E> {

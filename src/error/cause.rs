@@ -171,9 +171,9 @@ pub enum ErrorCause {
     /// A [`BlockType`](crate::types::BlockType) could not be parsed.
     /// - Contains `None` if the end of input was unexpectedly encountered.
     /// - Contains `Some` negative value if an unrecognized encoding for a type was encountered.
-    /// - Contains `Some` positive value if the parsed [`typeidx`] was too large.
+    /// - Contains `Some` positive value if the parsed [`TypeIdx`] was too large.
     ///
-    /// [`typeidx`]: crate::module::TypeIdx
+    /// [`TypeIdx`]: crate::module::TypeIdx
     BlockType(Option<core::num::NonZeroI64>),
     /// A [`ValType`](crate::types::ValType) was not valid.
     ///

@@ -1,33 +1,35 @@
 use crate::types::{self, TypeIdx};
 use core::fmt::{Display, Formatter};
 
-/// Represents a
-/// [WebAssembly number type](https://webassembly.github.io/spec/core/syntax/types.html#number-types).
+/// Represents a [WebAssembly number type].
+///
+/// [WebAssembly number type]: https://webassembly.github.io/spec/core/syntax/types.html#number-types
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 pub enum NumType {
-    /// The 32-bit integer, `i32`.
+    /// The 32-bit integer, **`i32`**.
     ///
-    /// Under the [Basic C ABI], `i32` corresponds to the `int`, `signed int`, `unsigned int`,
+    /// Under the [Basic C ABI], **`i32`** corresponds to the `int`, `signed int`, `unsigned int`,
     /// `long`, `signed long`, `unsigned long`, `size_t`, `enum`, and pointer types in C.
     ///
     /// [Basic C ABI]: https://github.com/WebAssembly/tool-conventions/blob/main/BasicCABI.md
     I32,
-    /// The 64-bit integer, `i64`.
+    /// The 64-bit integer, **`i64`**.
     ///
-    /// Under the [Basic C ABI], `i64` corresponds to the `long long`, `signed long long`, and
+    /// Under the [Basic C ABI], **`i64`** corresponds to the `long long`, `signed long long`, and
     /// `unsigned long long` types in C.
     ///
     /// [Basic C ABI]: https://github.com/WebAssembly/tool-conventions/blob/main/BasicCABI.md
     I64,
-    /// 32-bit IEEE-754 floating point (`f32`), sometimes referred to as `float`.
+    /// 32-bit IEEE-754 floating point (**`f32`**), sometimes referred to as `float`.
     F32,
-    /// 64-bit IEEE-754 floating point (`f64`), sometimes referred to as `double`.
+    /// 64-bit IEEE-754 floating point (**`f64`**), sometimes referred to as `double`.
     F64,
 }
 
-/// Represents a
-/// [WebAssembly vector type](https://webassembly.github.io/spec/core/syntax/types.html#vector-types).
+/// Represents a [WebAssembly vector type].
+///
+/// [WebAssembly vector type]: https://webassembly.github.io/spec/core/syntax/types.html#vector-types
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 pub enum VecType {
@@ -37,16 +39,17 @@ pub enum VecType {
     V128,
 }
 
-/// Represents a
-/// [WebAssembly reference type](https://webassembly.github.io/spec/core/syntax/types.html#reference-types).
+/// Represents a [WebAssembly reference type].
+///
+/// [WebAssembly reference type]: https://webassembly.github.io/spec/core/syntax/types.html#reference-types
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 pub enum RefType {
-    /// A `funcref`, a reference to a function.
+    /// A **`funcref`**, a reference to a function.
     ///
-    /// This type was originally known as `anyfunc` in the 2017 WebAssembly MVP.
+    /// This type was originally known as **`anyfunc`** in the 2017 WebAssembly MVP.
     Func,
-    /// An `externref`, an opaque reference to some object provided by the WebAssembly embedder.
+    /// An **`externref`**, an opaque reference to some object provided by the WebAssembly embedder.
     ///
     /// Introduced as part of the [reference types proposal].
     ///
@@ -54,31 +57,31 @@ pub enum RefType {
     Extern,
 }
 
-/// Represents a
-/// [WebAssembly value type](https://webassembly.github.io/spec/core/syntax/types.html#value-types),
-/// which indicate the types of values.
+/// Represents a [WebAssembly value type], which indicate the types of values.
+///
+/// [WebAssembly value type]: https://webassembly.github.io/spec/core/syntax/types.html#value-types
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 pub enum ValType {
-    /// The [`i32`](NumType::I32) numeric type.
+    /// The [**`i32`**](NumType::I32) numeric type.
     I32,
-    /// The [`i64`](NumType::I64) numeric type.
+    /// The [**`i64`**](NumType::I64) numeric type.
     I64,
-    /// The [`f32`](NumType::F32) numeric type.
+    /// The [**`f32`**](NumType::F32) numeric type.
     F32,
-    /// The [`f64`](NumType::F64) numeric type.
+    /// The [**`f64`**](NumType::F64) numeric type.
     F64,
-    /// The [`funcref`](RefType::Func) type.
+    /// The [**`funcref`**](RefType::Func) type.
     FuncRef,
-    /// The [`externref`](RefType::Extern) type.
+    /// The [**`externref`**](RefType::Extern) type.
     ExternRef,
-    /// The [`v128`](VecType::V128) type.
+    /// The [**`v128`**](VecType::V128) type.
     V128,
 }
 
-/// Represents a [**blocktype**] which describes the types of the inputs and results of a [block].
+/// Represents a [**`blocktype`**] which describes the types of the inputs and results of a [block].
 ///
-/// [**blocktype**]: https://webassembly.github.io/spec/core/binary/instructions.html#binary-blocktype
+/// [**`blocktype`**]: https://webassembly.github.io/spec/core/binary/instructions.html#binary-blocktype
 /// [block]: https://webassembly.github.io/spec/core/binary/instructions.html#control-instructions
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 #[non_exhaustive]
@@ -86,7 +89,7 @@ pub enum BlockType {
     /// Indicates a block has no outputs.
     #[default]
     Empty,
-    /// A [`typeidx`](TypeIdx) that describes the inputs and results for this block.
+    /// References a function type that describes the inputs and results for this block.
     Index(TypeIdx),
     /// A type describing the single output of a block.
     Inline(ValType),
@@ -171,7 +174,7 @@ pub struct TableType {
     pub limits: types::Limits,
 }
 
-/// Represents a [WebAssembly memory type]/
+/// Represents a [WebAssembly memory type].
 ///
 /// [WebAssembly memory type]: https://webassembly.github.io/spec/core/binary/types.html#memory-types
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
@@ -187,9 +190,9 @@ impl From<types::Limits> for MemType {
     }
 }
 
-/// Represents a [`tagtype`]. For more information, see the [exception handling proposal]
+/// Represents a [**`tagtype`**]. For more information, see the [exception handling proposal].
 ///
-/// [`tagtype`]: https://webassembly.github.io/exception-handling/core/syntax/types.html#syntax-tagtype
+/// [**`tagtype`**]: https://webassembly.github.io/exception-handling/core/syntax/types.html#syntax-tagtype
 /// [exception handling proposal]: https://github.com/WebAssembly/exception-handling/
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
@@ -197,6 +200,7 @@ pub enum TagType {
     /// Describes an exception that can be thrown or caught, introduced as part of the
     /// [exception handling proposal](https://github.com/WebAssembly/exception-handling/).
     ///
-    /// The parameter types define the values that are thrown and caught.
+    /// The parameter types of the function type that is referred to by the index define the
+    /// values that are thrown and caught.
     Exception(crate::module::TypeIdx),
 }

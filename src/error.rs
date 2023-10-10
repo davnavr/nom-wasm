@@ -8,6 +8,7 @@ pub use cause::{
     ErrorCause, ImportComponent, InvalidFlags, InvalidFlagsValue, InvalidTag, LengthMismatch,
     LimitsComponent,
 };
+#[doc(no_inline)]
 pub use nom::error::ErrorKind;
 pub use verbose_error::VerboseError;
 

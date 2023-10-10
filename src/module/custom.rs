@@ -19,7 +19,7 @@ pub struct CustomSection<'a> {
     ///
     /// [`name`]: https://webassembly.github.io/spec/core/binary/modules.html#custom-section
     pub name: &'a str,
-    /// The contents of the custom section.
+    /// The contents of the **`custom`**` section.
     pub contents: &'a [u8],
 }
 

@@ -21,13 +21,13 @@ pub struct ImportSec<'a> {
 }
 
 impl<'a> ImportSec<'a> {
-    /// The expected number of `import`s within the section.
+    /// The expected number of [`Import`]s within the section.
     #[inline]
     pub fn count(&self) -> usize {
         self.count.to_usize()
     }
 
-    /// Parses each `import` within the section, passing them to the given closure.
+    /// Parses each [`Import`] within the section, passing them to the given closure.
     pub fn parse_contents<E, F>(&self, mut f: F) -> crate::Parsed<'a, (), E>
     where
         E: error::ErrorSource<'a>,

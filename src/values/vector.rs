@@ -38,9 +38,9 @@ where
     Ok((input, ()))
 }
 
-/// Parses a [WebAssembly `vec`tor], which is a sequence of elements prefixed by a [`u32` length].
+/// Parses a [WebAssembly vector], which is a sequence of elements prefixed by a [`u32` length].
 ///
-/// [WebAssembly `vec`tor]: https://webassembly.github.io/spec/core/binary/conventions.html#vectors
+/// [WebAssembly vector]: https://webassembly.github.io/spec/core/binary/conventions.html#vectors
 /// [`u32` length]: vector_length
 pub fn vector<'a, E, P>(input: &'a [u8], parser: P) -> Parsed<'a, (), E>
 where

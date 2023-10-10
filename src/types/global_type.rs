@@ -1,8 +1,8 @@
 use crate::types::ValType;
 
-/// Indicates whether a WebAssembly [`global`] is mutable.
+/// Indicates whether a WebAssembly [**`global`**] is mutable.
 ///
-/// [`global`]: https://webassembly.github.io/spec/core/syntax/modules.html#globals
+/// [**`global`**]: https://webassembly.github.io/spec/core/syntax/modules.html#globals
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 #[allow(clippy::exhaustive_enums)]
 pub enum Mutability {
@@ -20,11 +20,11 @@ pub enum Mutability {
     Variable,
 }
 
-/// Represents a [`globaltype`], which indicates the type of value stored in a WebAssembly
-/// [`global`] and whether it is mutable.
+/// Represents a [**`globaltype`**], which indicates the type of value stored in a WebAssembly
+/// [**`global`**] and whether it is mutable.
 ///
-/// [`global`]: https://webassembly.github.io/spec/core/syntax/modules.html#globals
-/// [`globaltype`]: https://webassembly.github.io/spec/core/syntax/types.html#global-types
+/// [**`global`**]: https://webassembly.github.io/spec/core/syntax/modules.html#globals
+/// [**`globaltype`**]: https://webassembly.github.io/spec/core/syntax/types.html#global-types
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 pub struct GlobalType {
