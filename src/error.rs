@@ -2,6 +2,8 @@
 
 mod add_cause;
 mod cause;
+
+#[cfg(feature = "alloc")]
 mod verbose_error;
 
 pub use cause::{
@@ -10,6 +12,7 @@ pub use cause::{
 };
 #[doc(no_inline)]
 pub use nom::error::ErrorKind;
+#[cfg(feature = "alloc")]
 pub use verbose_error::VerboseError;
 
 pub(crate) use add_cause::AddCause;
@@ -80,8 +83,6 @@ impl ErrorSource<'_> for () {}
 impl<'a> ErrorSource<'a> for (&'a [u8], ErrorKind) {}
 
 impl<'a> ErrorSource<'a> for nom::error::Error<&'a [u8]> {}
-
-impl<'a> ErrorSource<'a> for nom::error::VerboseError<&'a [u8]> {}
 
 impl<'a> ErrorSource<'a> for Error<'a> {
     #[inline]

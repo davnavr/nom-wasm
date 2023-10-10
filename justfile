@@ -4,7 +4,7 @@ alias d := doc
 alias f := fmt
 alias t := test
 
-cfg_no_alloc := "--no-default-features --features arrayvec"
+cfg_no_alloc := "--no-default-features"
 cfg_no_std := cfg_no_alloc + " --features alloc"
 
 # Invokes fmt, clippy, then runs all unit tests

@@ -28,6 +28,7 @@ struct Inner<'a> {
 /// occured, and the reasons why it occured.
 #[derive(PartialEq)]
 #[repr(transparent)]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "alloc")))]
 pub struct VerboseError<'a> {
     inner: Box<Inner<'a>>,
 }
@@ -70,7 +71,7 @@ impl<'a> error::ErrorSource<'a> for VerboseError<'a> {
         Self {
             inner: Box::new(Inner {
                 base: ParseError::from_error_kind(input, kind),
-                additional: vec![Error::Cause(cause)],
+                additional: alloc::vec![Error::Cause(cause)],
             }),
         }
     }
