@@ -24,7 +24,7 @@ impl LengthMismatch {
 #[non_exhaustive]
 pub enum InvalidTag {
     /// An invalid [`ModuleSectionId`](crate::module::ModuleSectionId).
-    ModuleSectionId(Option<u8>),
+    ModuleSectionId(u8),
     #[allow(missing_docs)]
     FuncType(Option<u8>),
     /// An invalid [`ImportDesc`](crate::module::ImportDesc).
@@ -34,9 +34,8 @@ pub enum InvalidTag {
 impl Display for InvalidTag {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let (value, value_width) = match self {
-            Self::ModuleSectionId(b) | Self::FuncType(b) | Self::ImportDesc(b) => {
-                (b.map(u32::from), 4)
-            }
+            Self::ModuleSectionId(b) => (Some(u32::from(*b)), 4),
+            Self::FuncType(b) | Self::ImportDesc(b) => (b.map(u32::from), 4),
         };
 
         let name = match self {
@@ -201,6 +200,7 @@ pub enum ErrorCause {
         kind: u8,
     },
     Import(ImportComponent),
+    ModuleSectionOrder(crate::ordering::OrderingError<crate::module::ModuleSectionOrder>),
 }
 
 const _SIZE_CHECK: () = if core::mem::size_of::<ErrorCause>() > 16 {
@@ -301,6 +301,7 @@ impl Display for ErrorCause {
             Self::TagType => f.write_str("could not parse tag type"),
             Self::ImportDesc { kind } => write!(f, "error parsing importdesc kind {kind:#04X}"),
             Self::Import(field) => write!(f, "could not parse import: missing {field}"),
+            Self::ModuleSectionOrder(order) => Display::fmt(order, f),
         }
     }
 }

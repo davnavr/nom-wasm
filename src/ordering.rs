@@ -4,7 +4,7 @@ use core::cmp::PartialOrd;
 use core::fmt::Display;
 
 /// Error when the items processed by an [`Ordering<T>`] are not in the correct order.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum OrderingError<T: Copy> {
     /// A duplicate item was encountered.
@@ -49,6 +49,12 @@ impl<T: Copy + PartialOrd> Ordering<T> {
     #[inline]
     pub const fn new() -> Self {
         Self { previous: None }
+    }
+
+    /// Gets the previous value passed to [`check()`](Ordering::check).
+    #[inline]
+    pub fn previous(&self) -> Option<&T> {
+        self.previous.as_ref()
     }
 
     /// Checks that the `next` item is in the correct order.

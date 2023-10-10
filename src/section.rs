@@ -74,15 +74,16 @@ impl<'a> Section<'a> {
     */
 }
 
-/// Parses a sequence of WebAssembly [`Section`]s.
+/// Parses a sequence of WebAssembly [`Section`]s, passing the `input` before the [`Section`] was
+/// parsed, and the [`Section`] itself, into the given closure.
 pub fn sequence<'a, E, F>(mut input: &'a [u8], mut parser: F) -> Result<(), E>
 where
     E: ErrorSource<'a>,
-    F: FnMut(Section<'a>) -> Result<(), E>,
+    F: FnMut(&'a [u8], Section<'a>) -> Result<(), E>,
 {
     while !input.is_empty() {
         let (remaining, section) = Section::parse(input)?;
-        parser(section)?;
+        parser(input, section)?;
         input = remaining;
     }
 

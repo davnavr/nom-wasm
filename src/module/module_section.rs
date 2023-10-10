@@ -1,13 +1,12 @@
-use crate::module;
+use crate::{module, section::Section};
 
 macro_rules! module_sections {
     ($(
         $(#[$meta:meta])*
         $name:ident($component:ty) = $id:literal $(impl $from:ident)?,
     )+) => {
-        /// Represents a well-known WebAssembly [`Module`] [*section*] or a [`CustomSection`].
+        /// Represents a well-known WebAssembly module [*section*] or a [`CustomSection`].
         ///
-        /// [`Module`]: module::Module
         /// [*section*]: https://webassembly.github.io/spec/core/binary/modules.html#sections
         /// [`CustomSection`]: module::custom::CustomSection
         #[derive(Clone, Debug)]
@@ -36,6 +35,24 @@ macro_rules! module_sections {
                 match self {
                     $(Self::$name(_) => ModuleSectionId::$name,)*
                 }
+            }
+
+            /// Attempts to interpret the contents of a WebAssembly module [`Section`].
+            ///
+            /// Returns `Ok(Ok(_))` if the section was a known module section or custom section.
+            ///
+            /// # Errors
+            ///
+            /// - Returns `Err(_)` if the [`Section`] is not a known module section or a custom section.
+            /// - Returns `Ok(Err(_))` if the section was a known module section or custom
+            ///   section, but it could not be parsed.
+            pub fn interpret_section<'b, E>(
+                section: &'b Section<'a>
+            ) -> Result<crate::input::Result<Self, E>, &'b Section<'a>>
+            where
+                E: crate::error::ErrorSource<'a>,
+            {
+                todo!("bad {section:?}")
             }
         }
 
