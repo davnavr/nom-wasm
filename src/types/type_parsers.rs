@@ -92,8 +92,3 @@ impl<'a, E: ErrorSource<'a>> Parser<&'a [u8], ValType, E> for ValTypeParser {
         ValType::parse(input)
     }
 }
-
-/// Represents a WebAssembly [result type].
-///
-/// [result type]: https://webassembly.github.io/spec/core/binary/types.html#result-types
-pub type ResultType<'a, E> = sequence::VectorParser<'a, ValType, E, ValTypeParser>;

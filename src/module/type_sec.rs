@@ -54,18 +54,7 @@ where
 }
 
 fn debug_types<'a>(count: usize, types: &'a [u8], f: &mut Formatter<'_>) -> core::fmt::Result {
-    let mut list = f.debug_list();
-    let parser = |input: &'a [u8]| -> crate::Parsed<'a, _, _> {
-        let printer = debug::PrintOnce::new(crate::types::DebugFuncType::new(input));
-        list.entry(&printer);
-        match printer.expect_result() {
-            Ok(input) => Ok((input, ())),
-            Err(err) => Err(err),
-        }
-    };
-
-    let _ = VectorParser::new(types, count, parser).finish();
-    list.finish()
+    todo!()
 }
 
 impl<'a, P, E> Debug for TypesComponent<'a, P, E>
@@ -128,6 +117,8 @@ impl Debug for TypeSec<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         //debug_types(nom::ToUsize::to_usize(&self.count), self.types, f)
         // TODO: Pretty print the func types instead
-        f.debug_struct("TypeSec").field("count", &self.count).finish_non_exhaustive()
+        f.debug_struct("TypeSec")
+            .field("count", &self.count)
+            .finish_non_exhaustive()
     }
 }

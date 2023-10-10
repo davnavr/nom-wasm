@@ -11,6 +11,8 @@ mod vector;
 
 pub mod leb128;
 
+pub(crate) use vector::sequence;
+
 pub use leb128::{s32 as leb128_s32, s64 as leb128_s64, u32 as leb128_u32, u64 as leb128_u64};
 pub use vector::{vector, vector_length};
 
