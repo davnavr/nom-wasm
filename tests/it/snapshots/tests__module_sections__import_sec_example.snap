@@ -1,0 +1,56 @@
+---
+source: tests/it/module_sections.rs
+expression: result
+---
+Ok(
+    [
+        Import {
+            module: "env",
+            name: "doSomeStuff",
+            desc: Function(
+                0,
+            ),
+        },
+        Import {
+            module: "env",
+            name: "memory",
+            desc: Memory(
+                MemType {
+                    limits: Limits {
+                        bounds: I32 {
+                            min: 16,
+                            max: None,
+                        },
+                        share: Unshared,
+                    },
+                },
+            ),
+        },
+        Import {
+            module: "rt",
+            name: "references",
+            desc: Table(
+                TableType {
+                    element_type: Extern,
+                    limits: Limits {
+                        bounds: I32 {
+                            min: 0,
+                            max: None,
+                        },
+                        share: Unshared,
+                    },
+                },
+            ),
+        },
+        Import {
+            module: "rt",
+            name: "stackptr",
+            desc: Global(
+                GlobalType {
+                    mutability: Variable,
+                    value_type: I32,
+                },
+            ),
+        },
+    ],
+)

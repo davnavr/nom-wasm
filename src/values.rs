@@ -25,7 +25,7 @@ pub fn name<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> crate::Parsed<'a, &'a st
 
     if let Some(contents) = input.get(..length.to_usize()) {
         match core::str::from_utf8(contents) {
-            Ok(name) => Ok((&input[..length.to_usize()], name)),
+            Ok(name) => Ok((&input[length.to_usize()..], name)),
             Err(err) => Err(nom::Err::Failure(E::from_error_kind_and_cause(
                 contents,
                 ErrorKind::Verify,
