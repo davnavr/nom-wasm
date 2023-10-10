@@ -28,6 +28,7 @@ pub mod input;
 pub mod module;
 pub mod ordering;
 pub mod section;
+#[deprecated = "use values::vector instead"]
 pub mod sequence;
 pub mod types;
 pub mod values;
