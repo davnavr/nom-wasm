@@ -1,4 +1,4 @@
-use crate::error;
+use crate::error::{self, AddCause as _};
 use nom::ToUsize;
 
 mod import;
@@ -21,6 +21,17 @@ pub struct ImportSec<'a> {
 }
 
 impl<'a> ImportSec<'a> {
+    /// Parses an [`Import`] section from a section's contents.
+    pub fn parse<E>(contents: &'a [u8]) -> crate::input::Result<Self, E>
+    where
+        E: error::ErrorSource<'a>,
+    {
+        let (imports, count) =
+            crate::values::leb128_u32(contents).add_cause(error::ErrorCause::VectorLength)?;
+
+        Ok(Self { count, imports })
+    }
+
     /// The expected number of [`Import`]s within the section.
     #[inline]
     pub fn count(&self) -> usize {
