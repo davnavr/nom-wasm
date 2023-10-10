@@ -1,8 +1,11 @@
 use crate::{
+    debug,
     error::ErrorSource,
-    sequence::{self, VectorParser},
+    input::AsInput,
+    sequence::{self, Vector as _, VectorParser},
     types::{FuncTypeParser, ParseFuncType},
 };
+use core::fmt::{Debug, Formatter};
 
 type FuncTypeVectorParser<'a, P, E> = VectorParser<'a, (), E, FuncTypeParser<'a, P, E>>;
 
@@ -30,7 +33,7 @@ where
         Self { types }
     }
 
-    //fn finish
+    //fn finish(self) -> crate::Parser<'a, P, E>
 }
 
 sequence::wrap_sequence_impl! {
@@ -38,10 +41,6 @@ sequence::wrap_sequence_impl! {
     where
         P: ParseFuncType<'a, E>,
 }
-
-//Vector
-
-//IntoIterator
 
 impl<'a, P, E> Clone for TypesComponent<'a, P, E>
 where
@@ -54,13 +53,28 @@ where
     }
 }
 
-impl<'a, P, E> core::fmt::Debug for TypesComponent<'a, P, E>
+fn debug_types<'a>(count: usize, types: &'a [u8], f: &mut Formatter<'_>) -> core::fmt::Result {
+    let mut list = f.debug_list();
+    let parser = |input: &'a [u8]| -> crate::Parsed<'a, _, _> {
+        let printer = debug::PrintOnce::new(crate::types::DebugFuncType::new(input));
+        list.entry(&printer);
+        match printer.expect_result() {
+            Ok(input) => Ok((input, ())),
+            Err(err) => Err(err),
+        }
+    };
+
+    let _ = VectorParser::new(types, count, parser).finish();
+    list.finish()
+}
+
+impl<'a, P, E> Debug for TypesComponent<'a, P, E>
 where
     P: ParseFuncType<'a, E> + Clone,
     E: ErrorSource<'a>,
 {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        todo!() // TODO: Make helper debug struct for FuncType's
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        debug_types(self.types.expected_len(), self.types.as_input(), f)
     }
 }
 
@@ -101,8 +115,15 @@ impl<'a> TypeSec<'a> {
     }
 }
 
-impl core::fmt::Debug for TypeSec<'_> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        todo!() // TODO: Make helper debug struct for FuncType's
+impl<'a> AsInput<'a> for TypeSec<'a> {
+    #[inline]
+    fn as_input(&self) -> &'a [u8] {
+        self.types
+    }
+}
+
+impl Debug for TypeSec<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        debug_types(nom::ToUsize::to_usize(&self.count), self.types, f)
     }
 }

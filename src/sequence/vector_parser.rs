@@ -155,6 +155,27 @@ where
     }
 }
 
+/*
+impl<'i, T, E, P> debug::DebugParse<'i> for VectorParser<'i, T, crate::error::Error<'i>, P>
+where
+    P: Parser<&'i [u8], T, E>,
+    T: Debug,
+{
+    fn format<'a, 'b: 'a>(self, f: &'a mut core::fmt::Formatter<'b>) -> debug::Result<'i, 'a, 'b> {
+        let mut list = f.debug_list();
+        for result in self.into_iter() {
+            match result {
+                Ok(item) => {
+                    list.entry(&item);
+                } // TODO: Would it just be easier to allow custom E in debug::Result?
+                Err(error) => return Err(debug::ParseFailed::new(list, error).into()),
+            }
+        }
+        list.finish().map_err(Into::into)
+    }
+}
+*/
+
 impl<'a, T, E, P> Debug for VectorParser<'a, T, E, P>
 where
     E: ErrorSource<'a> + Debug + 'a,

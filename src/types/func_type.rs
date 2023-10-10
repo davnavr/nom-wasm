@@ -5,6 +5,12 @@ use crate::{
 };
 use core::marker::PhantomData;
 
+mod debug_func_type;
+
+pub(crate) use debug_func_type::DebugFuncType;
+
+// TODO: Move ParseFuncType E parameter to its functions?
+
 /// Trait for parsing a WebAssembly [function type].
 ///
 /// [function type]: https://webassembly.github.io/spec/core/binary/types.html#function-types
