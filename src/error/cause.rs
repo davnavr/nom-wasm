@@ -157,6 +157,11 @@ pub enum ErrorCause {
         index_type: crate::types::IdxType,
         component: LimitsComponent,
     },
+    RefType(crate::types::ValType),
+    #[non_exhaustive]
+    MemType,
+    #[non_exhaustive]
+    TableType,
 }
 
 const _SIZE_CHECK: () = if core::mem::size_of::<ErrorCause>() > 16 {
@@ -250,6 +255,9 @@ impl Display for ErrorCause {
                 })?;
                 write!(f, "-bit integer {component} bound for limit")
             }
+            Self::RefType(actual) => write!(f, "expected reftype but got {actual}"),
+            Self::MemType => f.write_str("could not parse memory type"),
+            Self::TableType => f.write_str("could not parse table type"),
         }
     }
 }

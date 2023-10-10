@@ -1,4 +1,4 @@
-use crate::types::TypeIdx;
+use crate::types::{self, TypeIdx};
 use core::fmt::{Display, Formatter};
 
 /// Represents a
@@ -155,5 +155,34 @@ impl Display for NumType {
 impl Display for RefType {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         Display::fmt(&ValType::from(*self), f)
+    }
+}
+
+/// Represents a WebAssembly [table type].
+///
+/// [table type]: https://webassembly.github.io/spec/core/binary/types.html#table-types
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[non_exhaustive]
+pub struct TableType {
+    /// Gets the type of elements stored in the table.
+    pub element_type: RefType,
+    /// Determines the minimum and maximum number of elements that can be stored in the table, and
+    /// whether or not it can be accessed in multiple agents.
+    pub limits: types::Limits,
+}
+
+/// Represents a [WebAssembly memory type]/
+///
+/// [WebAssembly memory type]: https://webassembly.github.io/spec/core/binary/types.html#memory-types
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+pub struct MemType {
+    /// Indicates the minimum and maximum number of pages for the linear memory.
+    pub limits: types::Limits,
+}
+
+impl From<types::Limits> for MemType {
+    #[inline]
+    fn from(limits: types::Limits) -> Self {
+        Self { limits }
     }
 }

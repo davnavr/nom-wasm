@@ -57,7 +57,7 @@ impl BlockType {
 impl ValType {
     /// Parses a [`ValType`].
     ///
-    /// See [`BlockType::parse()`] for more information.
+    /// See the documentation for [`BlockType::parse()`] for more information.
     ///
     /// # Errors
     ///
@@ -75,6 +75,28 @@ impl ValType {
                 input,
                 ErrorKind::Verify,
                 ErrorCause::ValType(Some(index)),
+            ))),
+        }
+    }
+}
+
+impl types::RefType {
+    /// Parses a [`RefType`](types::RefType).
+    ///
+    /// See the documentation for [`ValType::parse()`] for more information.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if some other [`ValType`] is parsed instead, or if the type was not
+    /// encoded correctly.
+    pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
+        match ValType::parse(input)? {
+            (input, ValType::FuncRef) => Ok((input, Self::Func)),
+            (input, ValType::ExternRef) => Ok((input, Self::Extern)),
+            (_, bad) => Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                input,
+                ErrorKind::Verify,
+                ErrorCause::RefType(bad),
             ))),
         }
     }
@@ -167,5 +189,34 @@ impl Limits {
         };
 
         Ok((input, Self { bounds, share }))
+    }
+}
+
+impl types::MemType {
+    /// Parses a [`MemType`](types::MemType).
+    ///
+    /// See the documentation for [`Limits::parse()`] for more information.
+    pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
+        Limits::parse(input)
+            .add_cause(ErrorCause::MemType)
+            .map(|(input, limits)| (input, Self { limits }))
+    }
+}
+
+impl types::TableType {
+    #[allow(missing_docs)]
+    pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
+        let (input, element_type) =
+            types::RefType::parse(input).add_cause(ErrorCause::TableType)?;
+
+        let (input, limits) = Limits::parse(input).add_cause(ErrorCause::TableType)?;
+
+        Ok((
+            input,
+            Self {
+                element_type,
+                limits,
+            },
+        ))
     }
 }
