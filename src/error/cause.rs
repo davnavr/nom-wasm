@@ -76,16 +76,23 @@ pub enum InvalidFlagsValue<V: Copy> {
 pub enum InvalidFlags {
     /// Invalid flags for [`Limits`](crate::types::Limits).
     Limits(InvalidFlagsValue<u8>),
+    /// Invalid flags for a [`GlobalType`](crate::types::GlobalType).
+    GlobalType(InvalidFlagsValue<u8>),
 }
 
 impl core::fmt::Display for InvalidFlags {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Limits(InvalidFlagsValue::Invalid { value, invalid }) => write!(
+        let (name, invalid) = match self {
+            Self::Limits(e) => ("limits", e),
+            Self::GlobalType(e) => ("global type", e),
+        };
+
+        match invalid {
+            InvalidFlagsValue::Invalid { value, invalid } => write!(
                 f,
-                "the limits flags {value:#04X} contains invalid flag(s): {invalid:#04X}"
+                "the {name} flags {value:#04X} contains invalid flag(s): {invalid:#04X}"
             ),
-            Self::Limits(InvalidFlagsValue::Missing) => f.write_str("missing limits flags"),
+            InvalidFlagsValue::Missing => write!(f, "missing {name} flags"),
         }
     }
 }
@@ -162,6 +169,8 @@ pub enum ErrorCause {
     MemType,
     #[non_exhaustive]
     TableType,
+    #[non_exhaustive]
+    GlobalType,
 }
 
 const _SIZE_CHECK: () = if core::mem::size_of::<ErrorCause>() > 16 {
@@ -258,6 +267,7 @@ impl Display for ErrorCause {
             Self::RefType(actual) => write!(f, "expected reftype but got {actual}"),
             Self::MemType => f.write_str("could not parse memory type"),
             Self::TableType => f.write_str("could not parse table type"),
+            Self::GlobalType => f.write_str("could not parse global type"),
         }
     }
 }

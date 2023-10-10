@@ -135,7 +135,7 @@ impl Limits {
         if invalid != 0 {
             return Err(nom::Err::Failure(E::from_error_kind_and_cause(
                 &input[..1],
-                ErrorKind::OneOf,
+                ErrorKind::Verify,
                 ErrorCause::InvalidFlags(error::InvalidFlags::Limits(
                     error::InvalidFlagsValue::Invalid {
                         value: flags,
@@ -189,6 +189,50 @@ impl Limits {
         };
 
         Ok((input, Self { bounds, share }))
+    }
+}
+
+impl types::GlobalType {
+    #[allow(missing_docs)]
+    pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
+        let (input, value_type) = ValType::parse(input).add_cause(ErrorCause::GlobalType)?;
+
+        let (input, flags) = if let Some((first, input)) = input.split_first() {
+            (input, *first)
+        } else {
+            return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                input,
+                ErrorKind::OneOf,
+                ErrorCause::InvalidFlags(error::InvalidFlags::GlobalType(
+                    error::InvalidFlagsValue::Missing,
+                )),
+            )));
+        };
+
+        let mutability = match flags {
+            0 => types::Mutability::Constant,
+            1 => types::Mutability::Variable,
+            _ => {
+                return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                    &input[..1],
+                    ErrorKind::OneOf,
+                    ErrorCause::InvalidFlags(error::InvalidFlags::GlobalType(
+                        error::InvalidFlagsValue::Invalid {
+                            value: flags,
+                            invalid: flags & (!1u8),
+                        },
+                    )),
+                )))
+            }
+        };
+
+        Ok((
+            input,
+            Self {
+                mutability,
+                value_type,
+            },
+        ))
     }
 }
 
