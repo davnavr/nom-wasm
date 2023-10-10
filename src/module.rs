@@ -15,4 +15,4 @@ pub use core_indices::{
 };
 pub use module_section::{ModuleSection, ModuleSectionId};
 //pub use module_section_sequence::{ModuleSectionOrder, ModuleSectionSequence};
-pub use type_sec::{TypeSec, TypesComponent};
+pub use type_sec::TypeSec;
