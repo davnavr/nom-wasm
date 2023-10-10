@@ -38,6 +38,15 @@ macro_rules! module_sections {
                 }
             }
         }
+
+        $($(
+            impl<'a> $from<$component> for ModuleSection<'a> {
+                #[inline]
+                fn from(value: $component) -> Self {
+                    Self::$name(value)
+                }
+            }
+        )?)+
     };
 }
 
@@ -48,9 +57,13 @@ module_sections! {
     /// anywhere within a module.
     ///
     /// [*custom section*]: https://webassembly.github.io/spec/core/binary/modules.html#binary-customsec
-    Custom(module::custom::CustomSection<'a>) = 0,
+    Custom(module::custom::CustomSection<'a>) = 0 impl From,
     /// The [*type section*].
     ///
     /// [*type section*]: https://webassembly.github.io/spec/core/binary/modules.html#type-section
     Type(module::TypeSec<'a>) = 1 impl From,
+    /// The [*import section*].
+    ///
+    /// [*import section*]: https://webassembly.github.io/spec/core/binary/modules.html#import-section
+    Import(module::ImportSec<'a>) = 2 impl From,
 }
