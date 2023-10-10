@@ -11,16 +11,28 @@ pub trait ParseResultType {
     fn next_type(&mut self, value_type: ValType);
 }
 
+impl<P: ParseResultType> ParseResultType for &mut P {
+    #[inline]
+    fn with_count(&mut self, count: usize) {
+        P::with_count(self, count)
+    }
+
+    #[inline]
+    fn next_type(&mut self, value_type: ValType) {
+        P::next_type(self, value_type)
+    }
+}
+
 const _OBJECT_SAFE: core::marker::PhantomData<&'static dyn ParseResultType> =
     core::marker::PhantomData;
 
 /// Parses a WebAssembly [result type].
 ///
 /// [result type]: https://webassembly.github.io/spec/core/binary/types.html#result-types
-pub fn result_type<'a, E, P>(input: &'a [u8], mut parser: P) -> crate::Parsed<'a, P, E>
+pub fn result_type<'a, P, E>(input: &'a [u8], mut parser: P) -> crate::Parsed<'a, P, E>
 where
-    E: ErrorSource<'a>,
     P: ParseResultType,
+    E: ErrorSource<'a>,
 {
     let (input, count) = values::vector_length(input)?;
     parser.with_count(count);
