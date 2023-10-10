@@ -171,6 +171,8 @@ pub enum ErrorCause {
     TableType,
     #[non_exhaustive]
     GlobalType,
+    #[non_exhaustive]
+    TagType,
 }
 
 const _SIZE_CHECK: () = if core::mem::size_of::<ErrorCause>() > 16 {
@@ -268,6 +270,7 @@ impl Display for ErrorCause {
             Self::MemType => f.write_str("could not parse memory type"),
             Self::TableType => f.write_str("could not parse table type"),
             Self::GlobalType => f.write_str("could not parse global type"),
+            Self::TagType => f.write_str("could not parse tag type"),
         }
     }
 }

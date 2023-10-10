@@ -14,7 +14,7 @@ pub use global_type::{GlobalType, Mutability};
 pub use limits::{IdxType, LimitBounds, Limits, Sharing};
 pub use result_type::{result_type, ParseResultType};
 pub use type_parsers::ValTypeParser;
-pub use val_type::{BlockType, MemType, NumType, RefType, TableType, ValType, VecType};
+pub use val_type::{BlockType, MemType, NumType, RefType, TableType, TagType, ValType, VecType};
 
 /*
 crate::tag::enumeration! {

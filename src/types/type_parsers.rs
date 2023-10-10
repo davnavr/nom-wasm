@@ -264,3 +264,12 @@ impl types::TableType {
         ))
     }
 }
+
+impl types::TagType {
+    #[allow(missing_docs)]
+    pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
+        let (input, _) = nom::bytes::complete::tag(&[0u8])(input).add_cause(ErrorCause::TagType)?;
+        let (input, index) = crate::index::Index::parse(input).add_cause(ErrorCause::TagType)?;
+        Ok((input, Self::Exception(index)))
+    }
+}

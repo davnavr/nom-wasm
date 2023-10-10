@@ -95,6 +95,10 @@ macro_rules! definitions {
                 core::fmt::Display::fmt(&self.0, f)
             }
         }
+
+        impl $crate::index::Index for $name {
+            const NAME: &'static str = $desc;
+        }
     )*};
 }
 

@@ -186,3 +186,17 @@ impl From<types::Limits> for MemType {
         Self { limits }
     }
 }
+
+/// Represents a [`tagtype`]. For more information, see the [exception handling proposal]
+///
+/// [`tagtype`]: https://webassembly.github.io/exception-handling/core/syntax/types.html#syntax-tagtype
+/// [exception handling proposal]: https://github.com/WebAssembly/exception-handling/
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[non_exhaustive]
+pub enum TagType {
+    /// Describes an exception that can be thrown or caught, introduced as part of the
+    /// [exception handling proposal](https://github.com/WebAssembly/exception-handling/).
+    ///
+    /// The parameter types define the values that are thrown and caught.
+    Exception(crate::module::TypeIdx),
+}
