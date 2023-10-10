@@ -14,24 +14,24 @@ pub trait ParseFuncType {
         Self: 'a;
 
     /// Handles parsing the parameter types of a function type.
-    fn parameters<'a>(&'a mut self) -> Self::ResultType<'a>;
+    fn parameters(&mut self) -> Self::ResultType<'_>;
 
     /// Handles parsing the result types of a function type.
     ///
     /// Called after the [`ParseFuncType::parameters()`] method.
-    fn results<'a>(&'a mut self) -> Self::ResultType<'a>;
+    fn results(&mut self) -> Self::ResultType<'_>;
 }
 
 impl<'b, P: ParseFuncType> ParseFuncType for &'b mut P {
     type ResultType<'a> = P::ResultType<'a> where 'b: 'a;
 
     #[inline]
-    fn parameters<'a>(&'a mut self) -> Self::ResultType<'a> {
+    fn parameters(&mut self) -> Self::ResultType<'_> {
         P::parameters(self)
     }
 
     #[inline]
-    fn results<'a>(&'a mut self) -> Self::ResultType<'a> {
+    fn results(&mut self) -> Self::ResultType<'_> {
         P::results(self)
     }
 }

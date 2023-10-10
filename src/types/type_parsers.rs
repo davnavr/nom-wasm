@@ -1,7 +1,6 @@
 use crate::{
     error::{AddCause, ErrorCause, ErrorKind, ErrorSource},
-    sequence,
-    types::{self, BlockType, ValType},
+    types::{BlockType, ValType},
     values::leb128,
     Parsed,
 };

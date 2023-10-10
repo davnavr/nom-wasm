@@ -47,6 +47,6 @@ where
     E: ErrorSource<'a>,
     P: nom::Parser<&'a [u8], (), E>,
 {
-    let (mut input, count) = vector_length(input)?;
+    let (input, count) = vector_length(input)?;
     sequence(input, count, parser)
 }

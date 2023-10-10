@@ -19,8 +19,6 @@ extern crate alloc;
 
 pub use nom;
 
-#[deprecated]
-mod debug;
 mod tag;
 
 pub mod error;
@@ -29,8 +27,6 @@ pub mod input;
 pub mod module;
 pub mod ordering;
 pub mod section;
-#[deprecated = "use values::vector instead"]
-pub mod sequence;
 pub mod types;
 pub mod values;
 
