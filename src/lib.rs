@@ -19,6 +19,7 @@ extern crate alloc;
 
 pub use nom;
 
+mod hex;
 mod tag;
 
 pub mod error;

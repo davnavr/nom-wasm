@@ -19,7 +19,7 @@ pub(crate) use add_cause::AddCause;
 
 /// Default error type, which tracks an error's location, the kind of error that occured, and why
 /// it occured.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct Error<'a> {
     /// A slice into the original input indicating where the error occured.
@@ -28,6 +28,16 @@ pub struct Error<'a> {
     pub kind: ErrorKind,
     /// A WASM parsing specific error code indicating why a parse failed.
     pub cause: Option<ErrorCause>,
+}
+
+impl core::fmt::Debug for Error<'_> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Error")
+            .field("input", &crate::hex::Bytes(self.input))
+            .field("kind", &self.kind)
+            .field("cause", &self.cause)
+            .finish()
+    }
 }
 
 impl<'a> From<nom::error::Error<&'a [u8]>> for Error<'a> {

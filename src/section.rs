@@ -16,14 +16,14 @@ use nom::ToUsize;
 ///
 /// [WebAssembly section]: https://webassembly.github.io/spec/core/binary/modules.html#sections
 /// [section within a module]: https://webassembly.github.io/spec/core/binary/modules.html#binary-section
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Section<'a> {
     /// The [*id*] for this section.
     ///
     /// [*id*]: https://webassembly.github.io/spec/core/binary/modules.html#sections
     pub id: u8,
     /// The contents of the section.
-    pub contents: &'a [u8], // TODO: Make a DebugHex struct
+    pub contents: &'a [u8],
 }
 
 impl<'a> Section<'a> {
@@ -72,6 +72,15 @@ impl<'a> Section<'a> {
         DebugModuleSection::new(self)
     }
     */
+}
+
+impl core::fmt::Debug for Section<'_> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Section")
+            .field("id", &crate::hex::Hex(self.id))
+            .field("contents", &crate::hex::Bytes(self.contents))
+            .finish()
+    }
 }
 
 /// Parses a sequence of WebAssembly [`Section`]s, passing the `input` before the [`Section`] was
