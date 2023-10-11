@@ -3,7 +3,7 @@ use crate::{module, section::Section};
 macro_rules! module_sections {
     ($(
         $(#[$meta:meta])*
-        $name:ident($component:ty) = $id:literal $(impl $from:ident)?,
+        [$id:literal]$name:ident($component:ty) $(impl $from:ident)? => $parse:path,
     )+) => {
         /// Represents a well-known WebAssembly module [*section*] or a [`CustomSection`].
         ///
@@ -52,7 +52,12 @@ macro_rules! module_sections {
             where
                 E: crate::error::ErrorSource<'a>,
             {
-                todo!("bad {section:?}")
+                match section.id {
+                    $(
+                        $id => Ok($parse(section.contents).map(Self::$name)),
+                    )+
+                    _ => Err(section),
+                }
             }
         }
 
@@ -74,13 +79,13 @@ module_sections! {
     /// anywhere within a module.
     ///
     /// [*custom section*]: https://webassembly.github.io/spec/core/binary/modules.html#binary-customsec
-    Custom(module::custom::CustomSection<'a>) = 0 impl From,
+    [0]Custom(module::custom::CustomSection<'a>) impl From => module::custom::CustomSection::parse,
     /// The [*type section*].
     ///
     /// [*type section*]: https://webassembly.github.io/spec/core/binary/modules.html#type-section
-    Type(module::TypeSec<'a>) = 1 impl From,
+    [1]Type(module::TypeSec<'a>) impl From => module::TypeSec::parse,
     /// The [*import section*].
     ///
     /// [*import section*]: https://webassembly.github.io/spec/core/binary/modules.html#import-section
-    Import(module::ImportSec<'a>) = 2 impl From,
+    [2]Import(module::ImportSec<'a>) impl From => module::ImportSec::parse,
 }

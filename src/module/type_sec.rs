@@ -1,5 +1,5 @@
 use crate::{
-    error::ErrorSource,
+    error::{AddCause as _, ErrorCause, ErrorSource},
     types::{FuncTypeParser, ParseFuncType},
 };
 
@@ -17,6 +17,14 @@ pub struct TypeSec<'a> {
 }
 
 impl<'a> TypeSec<'a> {
+    /// Parses a *type section* from a section's contents.
+    pub fn parse<E: ErrorSource<'a>>(contents: &'a [u8]) -> crate::input::Result<Self, E> {
+        let (types, count) =
+            crate::values::leb128_u32(contents).add_cause(ErrorCause::VectorLength)?;
+
+        Ok(Self { count, types })
+    }
+
     /// Returns a struct to parse the contents of the *type section*, using the provided
     /// [`ParseFuncType`] implementation.
     pub fn parse_contents_with<P, E>(&self, parser: P) -> crate::Parsed<'a, P, E>

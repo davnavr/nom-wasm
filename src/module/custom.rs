@@ -4,8 +4,8 @@
 
 use crate::{
     error::{AddCause as _, ErrorCause, ErrorSource},
+    input,
     section::Section,
-    Parsed,
 };
 
 /// Represents a [*custom section*] within a [WebAssembly module].
@@ -32,10 +32,10 @@ impl<'a> CustomSection<'a> {
     /// Parses a custom section from a [`Section`]'s [`contents`].
     ///
     /// [`contents`]: Section::contents
-    pub fn parse<E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
+    pub fn parse<E: ErrorSource<'a>>(input: &'a [u8]) -> input::Result<Self, E> {
         crate::values::name(input)
             .add_cause(ErrorCause::CustomSectionName)
-            .map(|(contents, name)| (contents, Self { name, contents }))
+            .map(|(contents, name)| Self { name, contents })
     }
 
     /// Attempts to interpret the contents of a WebAssembly module [`Section`] as a [`CustomSection`].
@@ -50,7 +50,7 @@ impl<'a> CustomSection<'a> {
     /// [`name`]: CustomSection::name
     pub fn interpret_section<'b, E: ErrorSource<'a>>(
         section: &'b Section<'a>,
-    ) -> Result<Parsed<'a, Self, E>, &'b Section<'a>> {
+    ) -> Result<input::Result<Self, E>, &'b Section<'a>> {
         if section.id == Self::ID {
             Ok(Self::parse(section.contents))
         } else {
