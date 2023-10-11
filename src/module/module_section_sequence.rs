@@ -75,7 +75,7 @@ pub fn module_section_sequence_with_unknown<'a, E, F, G>(
 ) -> Result<(), E>
 where
     E: ErrorSource<'a>,
-    F: FnMut(ModuleSection<'a>) -> Result<(), E>,
+    F: FnMut(ModuleSection<'a>, Option<ModuleSectionOrder>) -> Result<(), E>,
     G: FnMut(&'a [u8], Section<'a>, Option<ModuleSectionOrder>) -> Result<(), E>,
 {
     let mut order = crate::ordering::Ordering::new();
@@ -93,9 +93,9 @@ where
                         ))
                     })?;
                 }
-                f(known)
+                f(known, *order.previous())
             }
-            Err(_) => g(input, section, order.previous().copied()),
+            Err(_) => g(input, section, *order.previous()),
         },
     )
 }
@@ -126,7 +126,7 @@ fn no_unknown_section<'a, E: ErrorSource<'a>>(
 pub fn module_section_sequence<'a, E, F>(input: &'a [u8], f: F) -> Result<(), E>
 where
     E: ErrorSource<'a>,
-    F: FnMut(ModuleSection<'a>) -> Result<(), E>,
+    F: FnMut(ModuleSection<'a>, Option<ModuleSectionOrder>) -> Result<(), E>,
 {
     module_section_sequence_with_unknown(input, f, no_unknown_section::<'a, E>)
 }

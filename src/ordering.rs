@@ -53,8 +53,8 @@ impl<T: Copy + PartialOrd> Ordering<T> {
 
     /// Gets the previous value passed to [`check()`](Ordering::check).
     #[inline]
-    pub fn previous(&self) -> Option<&T> {
-        self.previous.as_ref()
+    pub fn previous(&self) -> &Option<T> {
+        &self.previous
     }
 
     /// Checks that the `next` item is in the correct order.

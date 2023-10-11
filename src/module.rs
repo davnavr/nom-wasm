@@ -5,12 +5,14 @@
 pub mod custom;
 pub mod preamble;
 
+mod binary;
 mod core_indices;
 mod import_sec;
 mod module_section;
 mod module_section_sequence;
 mod type_sec;
 
+pub use binary::Module;
 pub use core_indices::{
     DataIdx, ElemIdx, FuncIdx, GlobalIdx, LabelIdx, MemIdx, TableIdx, TagIdx, TypeIdx,
 };
