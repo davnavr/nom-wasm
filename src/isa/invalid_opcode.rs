@@ -3,13 +3,12 @@ use core::fmt::{Debug, Formatter};
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum Inner {
     Byte(u8),
-    Prefixed { opcode: u8, secondary: u32 },
+    Prefixed { prefix: u8, secondary: u32 },
     Missing,
+    MissingActual { prefix: u8 },
 }
 
-const _SIZE_CHECK: () = if core::mem::size_of::<InvalidOpcode>() > 8 {
-    panic!("size_of<InvalidOpcode> must be at most 8 bytes")
-};
+crate::static_assert::check_size!(Option<InvalidOpcode>, <= 8);
 
 /// Error type used when a WebAssembly instruction opcode is invalid.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
@@ -20,10 +19,18 @@ impl InvalidOpcode {
     #[inline]
     pub(in crate::isa) const fn new(opcode: u8, secondary: Option<u32>) -> Self {
         Self(if let Some(secondary) = secondary {
-            Inner::Prefixed { opcode, secondary }
+            Inner::Prefixed {
+                prefix: opcode,
+                secondary,
+            }
         } else {
             Inner::Byte(opcode)
         })
+    }
+
+    #[inline]
+    pub(in crate::isa) const fn missing_actual(prefix: u8) -> Self {
+        Self(Inner::MissingActual { prefix })
     }
 
     pub(in crate::isa) const MISSING: Self = Self(Inner::Missing);
@@ -40,11 +47,15 @@ impl core::fmt::Display for InvalidOpcode {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self.0 {
             Inner::Byte(opcode) => write!(f, "{opcode:#04X} is not a recognized opcode"),
-            Inner::Prefixed { opcode, secondary } => write!(
+            Inner::Prefixed { prefix, secondary } => write!(
                 f,
-                "opcode {secondary} following prefix {opcode:#04X} is not a recognized opcode"
+                "opcode {secondary} following prefix byte {prefix:#04X} is not a recognized opcode"
             ),
             Inner::Missing => f.write_str("opcode was missing"),
+            Inner::MissingActual { prefix } => write!(
+                f,
+                "missing actual opcode following prefix byte {prefix:#04X}"
+            ),
         }
     }
 }

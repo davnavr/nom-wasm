@@ -3,10 +3,11 @@ use crate::{isa::InvalidOpcode, static_assert};
 crate::tag::enumeration_basic! {
     /// List of all WebAssembly [*opcodes*] that encode an instruction in a single byte.
     ///
-    /// See [`InstrKind`](crate::instructions::InstrKind) for the set of all possible
+    /// See the [`InstrKind`](crate::isa::InstrKind) `enum` for the set of all possible
     /// [*opcodes*], including those with prefix bytes.
     ///
     /// [*opcodes*]: https://webassembly.github.io/spec/core/binary/instructions.html#instructions
+    /// [`InstrKind`]: crate::isa::InstrKind
     #[derive(Default)]
     #[non_exhaustive]
     #[allow(missing_docs)]
@@ -255,6 +256,11 @@ macro_rules! prefixed_opcodes {
             }
         }
 
+        impl $enum_name {
+            #[allow(missing_docs)]
+            pub const PREFIX: u8 = $prefix;
+        }
+
         impl TryFrom<u32> for $enum_name {
             type Error = InvalidOpcode;
 
@@ -273,10 +279,10 @@ prefixed_opcodes! {
     /// - The [bulk-memory operations] proposal.
     /// - The [reference types] proposal.
     ///
-    /// [`0xFC` opcode]: crate::instructions::InstrKind::FCPrefixed
-    /// [non-trapping float-to-integer conversions]: crate::FeatureSet::NON_TRAPPING_FLOAT_TO_INT_CONVERSIONS
-    /// [bulk-memory operations]: crate::FeatureSet::BULK_MEMORY_OPERATIONS
-    /// [reference types]: crate::FeatureSet::REFERENCE_TYPES
+    /// [`0xFC` opcode]: crate::isa::InstrKind::FCPrefixed
+    /// [non-trapping float-to-integer conversions]: https://github.com/WebAssembly/nontrapping-float-to-int-conversions
+    /// [bulk-memory operations]: https://github.com/WebAssembly/bulk-memory-operations
+    /// [reference types]: https://github.com/WebAssembly/reference-types
     FCPrefixedOpcode(0xFC) {
         I32TruncSatF32S = 0,
         I32TruncSatF32U = 1,
@@ -305,8 +311,8 @@ prefixed_opcodes! {
     /// The feature proposals that introduced these opcodes include:
     /// - The [threads] proposal, which introduced atomic memory instructions.
     ///
-    /// [`0xFE` opcode]: crate::instructions::InstrKind::FEPrefixed
-    /// [threads]: crate::FeatureSet::THREADS
+    /// [`0xFE` opcode]: crate::isa::InstrKind::FEPrefixed
+    /// [threads]: https://github.com/webassembly/threads
     FEPrefixedOpcode(0xFE) {
         MemoryAtomicNotify = 0,
         MemoryAtomicWait32 = 1,
@@ -395,9 +401,9 @@ prefixed_opcodes! {
     ///   [fixed-width SIMD proposal].
     ///
     /// [vector instruction]: https://webassembly.github.io/spec/core/binary/instructions.html#vector-instructions
-    /// [`0xFD` opcode]: crate::instructions::InstrKind::V128
-    /// [fixed-width SIMD proposal]: crate::FeatureSet::FIXED_WIDTH_SIMD
-    /// [relaxed SIMD proposal]: crate::FeatureSet::RELAXED_SIMD
+    /// [`0xFD` opcode]: crate::isa::InstrKind::V128
+    /// [fixed-width SIMD proposal]: https://github.com/webassembly/simd
+    /// [relaxed SIMD proposal]: https://github.com/WebAssembly/relaxed-simd
     V128Opcode(0xFD) {
         V128Load = 0,
         V128Load8x8S = 1,
