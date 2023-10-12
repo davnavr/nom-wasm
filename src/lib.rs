@@ -28,6 +28,7 @@ pub mod input;
 pub mod module;
 pub mod ordering;
 pub mod section;
+pub mod storage;
 pub mod types;
 pub mod values;
 
