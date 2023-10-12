@@ -3,11 +3,11 @@
 //! By default, [`nom-wasm`] does not allocate during parsing. This module provides traits to
 //! support easier to use APIs for parsing complex WebAssembly structurs (e.g. a [`FuncType`]).
 //!
-//! If a global allocator is provided, then the standard library types for heap allocation (e.g.
-//! [`alloc::vec::Vec`]) can be used.
+//! If a global allocator is provided (by enabling the `alloc` feature), then the standard library
+//! types for heap allocation (e.g. [`alloc::vec::Vec`]) can be used.
 //!
 //! If the `allocator-api2` feature is enabled, then additional trait implementations are provided
-//! (e.g. for [`allocator-api2::vec::Vec`]).
+//! (e.g. for [`allocator_api2::vec::Vec`]).
 //!
 //! [`nom-wasm`]: crate
 //! [`FuncType`]: crate::types::FuncType
@@ -81,6 +81,56 @@ pub trait Vector: Deref<Target = [Self::Item]> + DerefMut {
 impl<T> Vector for alloc::vec::Vec<T> {
     type Item = T;
     type Boxed = alloc::boxed::Box<[T]>;
+
+    #[inline]
+    fn into_boxed_slice(self) -> Self::Boxed {
+        <Self>::into_boxed_slice(self)
+    }
+
+    #[inline]
+    fn push(&mut self, item: Self::Item) {
+        <Self>::push(self, item);
+    }
+
+    #[inline]
+    fn pop(&mut self) -> Option<Self::Item> {
+        <Self>::pop(self)
+    }
+
+    #[inline]
+    fn capacity(&self) -> usize {
+        <Self>::capacity(self)
+    }
+
+    #[inline]
+    fn clear(&mut self) {
+        <Self>::clear(self);
+    }
+
+    #[inline]
+    fn reserve(&mut self, additional: usize) {
+        <Self>::reserve(self, additional);
+    }
+
+    #[inline]
+    fn reserve_exact(&mut self, additional: usize) {
+        <Self>::reserve_exact(self, additional);
+    }
+
+    #[inline]
+    fn with_capacity(capacity: usize) -> Self
+    where
+        Self: Default,
+    {
+        <Self>::with_capacity(capacity)
+    }
+}
+
+#[cfg_attr(doc_cfg, doc(cfg(feature = "allocator-api2")))]
+#[cfg(feature = "allocator-api2")]
+impl<T> Vector for allocator_api2::vec::Vec<T> {
+    type Item = T;
+    type Boxed = allocator_api2::boxed::Box<[T]>;
 
     #[inline]
     fn into_boxed_slice(self) -> Self::Boxed {
