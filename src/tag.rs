@@ -1,4 +1,4 @@
-macro_rules! enumeration {
+macro_rules! enumeration_basic {
     (
         $(#[$enum_meta:meta])*
         pub $enum_name:ident : $integer:ty {
@@ -10,7 +10,6 @@ macro_rules! enumeration {
     ) => {
         $(#[$enum_meta])*
         #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-        #[repr($integer)]
         pub enum $enum_name {$(
             $(#[$case_meta])*
             $case_name = $case_value,
@@ -33,6 +32,28 @@ macro_rules! enumeration {
                 tag as $integer
             }
         }
+    };
+}
+
+macro_rules! enumeration {
+    (
+        $(#[$enum_meta:meta])*
+        pub $enum_name:ident : $integer:ty {
+            $(
+                $(#[$case_meta:meta])*
+                $case_name:ident = $case_value:literal,
+            )*
+        }
+    ) => {
+        $crate::tag::enumeration_basic! {
+            $(#[$enum_meta])*
+            pub $enum_name : $integer {
+                $(
+                    $(#[$case_meta])*
+                    $case_name = $case_value,
+                )*
+            }
+        }
 
         impl TryFrom<$integer> for $enum_name {
             type Error = $crate::error::InvalidTag;
@@ -50,3 +71,4 @@ macro_rules! enumeration {
 }
 
 pub(crate) use enumeration;
+pub(crate) use enumeration_basic;

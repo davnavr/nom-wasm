@@ -201,6 +201,7 @@ pub enum ErrorCause {
     },
     Import(ImportComponent),
     ModuleSectionOrder(crate::ordering::OrderingError<crate::module::ModuleSectionOrder>),
+    Opcode(crate::isa::InvalidOpcode),
 }
 
 const _SIZE_CHECK: () = if core::mem::size_of::<ErrorCause>() > 16 {
@@ -302,6 +303,7 @@ impl Display for ErrorCause {
             Self::ImportDesc { kind } => write!(f, "error parsing importdesc kind {kind:#04X}"),
             Self::Import(field) => write!(f, "could not parse import: missing {field}"),
             Self::ModuleSectionOrder(order) => Display::fmt(order, f),
+            Self::Opcode(bad) => Display::fmt(bad, f),
         }
     }
 }

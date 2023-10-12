@@ -20,11 +20,13 @@ extern crate alloc;
 pub use nom;
 
 mod hex;
+mod static_assert;
 mod tag;
 
 pub mod error;
 pub mod index;
 pub mod input;
+pub mod isa;
 pub mod module;
 pub mod ordering;
 pub mod section;
