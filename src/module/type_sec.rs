@@ -2,9 +2,12 @@ use crate::{
     error::{AddCause as _, ErrorCause, ErrorSource},
     input::Result,
     storage::Vector,
-    types::{self, FuncType, FuncTypeParser, ParseFuncType},
+    types::{self, BuildFuncType, FuncType, FuncTypeParser, ParseFuncType},
 };
 use nom::ToUsize as _;
+
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
 /// Represents the [*type section*] of a WebAssembly module.
 ///
@@ -51,12 +54,12 @@ impl<'a> TypeSec<'a> {
         self.parse_contents_with(P::default())
     }
 
-    /// Parse the contents of the *type section*, appending each parsed [`FuncType`] to the end of
-    /// the `destination` [`Vector`].
+    /// Parse all of the contents of the *type section*, appending each parsed [`FuncType`] to the
+    /// end of the `destination` [`Vector`].
     pub fn parse_all_contents_with<E, V, B>(
         &self,
         destination: &mut V,
-        buffer: &mut types::BuildFuncType<B>,
+        buffer: &mut BuildFuncType<B>,
     ) -> Result<(), E>
     where
         E: ErrorSource<'a>,
@@ -72,6 +75,21 @@ impl<'a> TypeSec<'a> {
         })?;
         nom::combinator::eof(input)?;
         Ok(())
+    }
+
+    /// Parses all of the contents of the *type section*, returning a [`Vec`] of all of the parsed
+    /// [`FuncType`]s.
+    ///
+    /// [`Vec`]: alloc::vec::Vec
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "alloc")))]
+    #[cfg(feature = "alloc")]
+    pub fn parse_all_contents<E: ErrorSource<'a>>(
+        &self,
+        buffer: &mut BuildFuncType<Vec<types::ValType>>,
+    ) -> Result<Vec<FuncType<Vec<types::ValType>>>, E> {
+        let mut types = Vec::with_capacity(self.count.to_usize());
+        self.parse_all_contents_with(&mut types, buffer)?;
+        Ok(types)
     }
 }
 
