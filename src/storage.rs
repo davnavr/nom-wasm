@@ -64,11 +64,17 @@ pub trait Vector: Deref<Target = [Self::Item]> + DerefMut {
     fn reserve_exact(&mut self, additional: usize) {
         self.reserve(additional)
     }
+
+    /// Allocates a new vector that can contain at least `capacity` items without reallocating.
+    fn with_capacity(capacity: usize) -> Self
+    where
+        Self: Default,
+    {
+        let mut vec = Self::default();
+        vec.reserve_exact(capacity);
+        vec
+    }
 }
-
-// TODO: macro for implementing Vector
-
-// TODO: impl Vector for ArrayVec
 
 #[cfg_attr(doc_cfg, doc(cfg(feature = "alloc")))]
 #[cfg(feature = "alloc")]
@@ -109,5 +115,13 @@ impl<T> Vector for alloc::vec::Vec<T> {
     #[inline]
     fn reserve_exact(&mut self, additional: usize) {
         <Self>::reserve_exact(self, additional);
+    }
+
+    #[inline]
+    fn with_capacity(capacity: usize) -> Self
+    where
+        Self: Default,
+    {
+        <Self>::with_capacity(capacity)
     }
 }

@@ -4,6 +4,10 @@ use crate::{
 };
 use nom::Parser;
 
+mod alloc_func_type;
+
+pub use alloc_func_type::{BuildFuncType, FuncType};
+
 /// Trait for parsing a WebAssembly [function type].
 ///
 /// [function type]: https://webassembly.github.io/spec/core/binary/types.html#function-types
@@ -106,6 +110,3 @@ where
     let (input, _) = types::result_type(input, parsers.results())?;
     Ok((input, parsers))
 }
-
-//#[cfg(feature = "alloc")]
-//pub struct FuncType { types: Box<[ValType]> }
