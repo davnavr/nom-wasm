@@ -204,9 +204,7 @@ pub enum ErrorCause {
     Opcode(crate::isa::InvalidOpcode),
 }
 
-const _SIZE_CHECK: () = if core::mem::size_of::<ErrorCause>() > 16 {
-    panic!("ErrorCause is too large")
-};
+crate::static_assert::check_size!(ErrorCause, <= 16);
 
 impl Display for ErrorCause {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
