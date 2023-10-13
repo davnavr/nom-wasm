@@ -29,6 +29,23 @@ pub trait Index:
     }
 }
 
+/// Provides a [`nom::Parser`] implementation for a [*LEB128*](crate::values::leb128) encoded
+/// [`Index`].
+#[derive(Clone, Copy, Debug, Default)]
+#[non_exhaustive]
+pub struct IndexParser;
+
+impl<'a, I, E> nom::Parser<&'a [u8], I, E> for IndexParser
+where
+    I: Index,
+    E: crate::error::ErrorSource<'a>,
+{
+    #[inline]
+    fn parse(&mut self, input: &'a [u8]) -> crate::Parsed<'a, I, E> {
+        <I>::parse(input)
+    }
+}
+
 /// Defines wrapper structs that represent a WebAssembly [`Index`].
 ///
 /// The generated structs automatically derive [`Clone`], [`Copy`], [`Eq`], [`Ord`], and [`Hash`],
