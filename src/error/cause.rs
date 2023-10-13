@@ -106,7 +106,7 @@ impl core::fmt::Display for InvalidFlags {
 impl std::error::Error for InvalidFlags {}
 
 /// Indicates which part of a [`Limits`](crate::types::Limits) could not be parsed.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 #[allow(missing_docs)]
 pub enum LimitsComponent {
@@ -124,7 +124,7 @@ impl core::fmt::Display for LimitsComponent {
 }
 
 /// Indicates which field of an [`Import`](crate::module::Import) could not be parsed.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 #[allow(missing_docs)]
 pub enum ImportComponent {
@@ -202,6 +202,11 @@ pub enum ErrorCause {
     Import(ImportComponent),
     ModuleSectionOrder(crate::ordering::OrderingError<crate::module::ModuleSectionOrder>),
     Opcode(crate::isa::InvalidOpcode),
+    #[non_exhaustive]
+    Instr {
+        opcode: crate::isa::InstrKind,
+        reason: crate::isa::InvalidInstr,
+    },
 }
 
 crate::static_assert::check_size!(ErrorCause, <= 16);
@@ -302,6 +307,7 @@ impl Display for ErrorCause {
             Self::Import(field) => write!(f, "could not parse import: missing {field}"),
             Self::ModuleSectionOrder(order) => Display::fmt(order, f),
             Self::Opcode(bad) => Display::fmt(bad, f),
+            Self::Instr { opcode, reason } => write!(f, "could not parse {opcode:?} instruction {reason}"),
         }
     }
 }
