@@ -129,7 +129,7 @@ macro_rules! instr_kind_name_case {
 
 macro_rules! instr_kind_name {
     ($(
-        $opcode_case:ident $wasm_name:literal $pascal_ident:ident $snake_ident:ident;
+        $opcode_case:ident $wasm_name:literal $pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;
     )*) => {
         impl InstrKind {
             /// Gets the name of the WebAssembly instruction that this opcode corresponds to, in

@@ -1,4 +1,5 @@
 use crate::error::ErrorSource;
+use crate::types::BlockType;
 
 /// Error type used by the [`ParseInstr`] trait's methods.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -22,13 +23,31 @@ impl<E: core::fmt::Display> core::fmt::Display for ParseInstrError<E> {
 /// Result type used by the [`ParseInstr`] trait's methods.
 pub type Result<T, E> = core::result::Result<T, ParseInstrError<E>>;
 
+macro_rules! parse_instr_method_definition {
+    ($opcode_case:ident $wasm_name:literal $pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;) => {
+        fn $snake_ident(&mut self $(, $($field_name: $field_type),+ )?) -> Result<(), ParseInstrError<E>> {
+            $(
+                $(let _ = $field_name;)+
+            )?
+            Err(ParseInstrError::Unrecognized)
+        }
+    };
+}
+
+macro_rules! parse_instr_method {
+    ($(
+        $opcode_case:ident $wasm_name:literal $pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;
+    )*) => {
+        $(
+            parse_instr_method_definition!($opcode_case $wasm_name $pascal_ident $({ $($field_name: $field_type),+ })? $snake_ident;);
+        )*
+    };
+}
+
 /// Trait for parsing [WebAssembly instructions].
 ///
 /// [WebAssembly instructions]: https://webassembly.github.io/spec/core/binary/instructions.html
-pub trait ParseInstr<'a> {
-    /// Error type used when parsing an instruction's immediate argument fails.
-    type Error: crate::error::ErrorSource<'a>;
-
-    //fn unreachable(&mut self);
-    //fn nop(&mut self);
+#[allow(missing_docs)]
+pub trait ParseInstr<'a, E: ErrorSource<'a>> {
+    crate::isa::instr_definitions::all!(parse_instr_method);
 }

@@ -4,7 +4,7 @@
 /// ```no_run
 /// macro_rules! called_macro {
 ///     ($(
-///         $opcode_case:ident $wasm_name:literal $pascal_ident:ident $snake_ident:ident;
+///         $opcode_case:ident $wasm_name:literal $pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;
 ///     )*) => {
 ///         // Add your macro content here
 ///     };
@@ -25,9 +25,9 @@ macro_rules! all {
             */
             Byte /*mvp*/ "unreachable" Unreachable unreachable;
             Byte /*mvp*/ "nop" Nop nop;
-            Byte /*mvp*/ "block" Block block;
-            Byte /*mvp*/ "loop" Loop r#loop;
-            Byte /*mvp*/ "if" If r#if;
+            Byte /*mvp*/ "block" Block { block_type: BlockType } block;
+            Byte /*mvp*/ "loop" Loop { block_type: BlockType }  r#loop;
+            Byte /*mvp*/ "if" If { block_type: BlockType }  r#if;
             Byte /*mvp*/ "else" Else r#else;
             Byte /*mvp*/ "end" End end;
             Byte /*mvp*/ "br" Br br;
@@ -604,6 +604,9 @@ macro_rules! all {
             V128 /*relaxed_simd*/ "i32x4.relaxed_dot_i8x16_i7x16_add_s" I32x4RelaxedDotI8x16I7x16AddS i32x4_relaxed_dot_i8x16_i7x16_add_s;
         }
     };
+    ($called_macro:ident) => {
+        crate::isa::instr_definitions::all!($called_macro @ ignore_field_type);
+    }
 }
 
 pub(in crate::isa) use all;
