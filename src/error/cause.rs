@@ -307,7 +307,9 @@ impl Display for ErrorCause {
             Self::Import(field) => write!(f, "could not parse import: missing {field}"),
             Self::ModuleSectionOrder(order) => Display::fmt(order, f),
             Self::Opcode(bad) => Display::fmt(bad, f),
-            Self::Instr { opcode, reason } => write!(f, "could not parse {opcode:?} instruction {reason}"),
+            Self::Instr { opcode, reason } => {
+                write!(f, "could not parse {opcode} instruction {reason}")
+            }
         }
     }
 }

@@ -6,6 +6,8 @@ mod cause;
 #[cfg(feature = "alloc")]
 mod verbose_error;
 
+#[doc(no_inline)]
+pub use crate::isa::{InvalidInstr, InvalidOpcode};
 pub use cause::{
     ErrorCause, ImportComponent, InvalidFlags, InvalidFlagsValue, InvalidTag, LengthMismatch,
     LimitsComponent,
@@ -14,8 +16,6 @@ pub use cause::{
 pub use nom::error::ErrorKind;
 #[cfg(feature = "alloc")]
 pub use verbose_error::VerboseError;
-#[doc(no_inline)]
-pub use crate::isa::{InvalidInstr, InvalidOpcode};
 
 pub(crate) use add_cause::AddCause;
 

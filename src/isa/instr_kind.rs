@@ -111,3 +111,45 @@ impl InstrKind {
         }
     }
 }
+
+macro_rules! instr_kind_name_case {
+    (Byte $pascal_ident:ident) => {
+        InstrKind::Byte(Opcode::$pascal_ident)
+    };
+    (FCPrefixed $pascal_ident:ident) => {
+        InstrKind::FCPrefixed(FCPrefixedOpcode::$pascal_ident)
+    };
+    (V128 $pascal_ident:ident) => {
+        InstrKind::V128(V128Opcode::$pascal_ident)
+    };
+    (FEPrefixed $pascal_ident:ident) => {
+        InstrKind::FEPrefixed(FEPrefixedOpcode::$pascal_ident)
+    };
+}
+
+macro_rules! instr_kind_name {
+    ($(
+        $opcode_case:ident $wasm_name:literal $pascal_ident:ident $snake_ident:ident;
+    )*) => {
+        impl InstrKind {
+            /// Gets the name of the WebAssembly instruction that this opcode corresponds to, in
+            /// the [WebAssembly text format].
+            ///
+            /// [WebAssembly text format]: https://webassembly.github.io/spec/core/text/instructions.html
+            pub fn name(&self) -> &'static str {
+                match self {
+                    $(instr_kind_name_case!($opcode_case $pascal_ident) => $wasm_name,)*
+                }
+            }
+        }
+    };
+}
+
+crate::isa::instr_definitions::all!(instr_kind_name);
+
+impl core::fmt::Display for InstrKind {
+    #[inline]
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(self.name())
+    }
+}
