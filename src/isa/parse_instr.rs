@@ -31,7 +31,7 @@ pub type Result<T, E> = core::result::Result<T, ParseInstrError<E>>;
 macro_rules! instr_method_define_default {
     ($name:ident($($($parameter:ident: $parameter_ty:ty),+)?)) => {
         #[inline]
-        fn $name(&mut self $(, $($parameter: $parameter_ty),+)?) -> Result<(), ParseInstrError<E>> {
+        fn $name(&mut self $(, $($parameter: $parameter_ty),+)?) -> Result<(), E> {
             $($(let _ = $parameter;)*)?
             Err(ParseInstrError::Unrecognized)
         }
@@ -73,7 +73,7 @@ impl<'a, E: ErrorSource<'a>> ParseInstr<'a, E> for () {}
 macro_rules! instr_method_define_delegate {
     ($name:ident($($($parameter:ident: $parameter_ty:ty),+)?)) => {
         #[inline]
-        fn $name(&mut self $(, $($parameter: $parameter_ty),+)?) -> Result<(), ParseInstrError<E>> {
+        fn $name(&mut self $(, $($parameter: $parameter_ty),+)?) -> Result<(), E> {
             <P>::$name(self $(, $($parameter),+)?)
         }
     };

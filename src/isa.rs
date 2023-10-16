@@ -10,6 +10,7 @@ mod invalid_opcode;
 mod mem_arg;
 mod opcodes;
 mod parse_instr;
+mod parse_instruction;
 
 pub use crate::module::LabelIdx;
 pub use br_table_targets::BrTableTargets;
@@ -19,6 +20,7 @@ pub use invalid_opcode::InvalidOpcode;
 pub use mem_arg::{Align, MemArg};
 pub use opcodes::{FCPrefixedOpcode, FEPrefixedOpcode, Opcode, V128Opcode};
 pub use parse_instr::{ParseInstr, ParseInstrError, Result};
+pub use parse_instruction::instr;
 
 /// A WebAssembly [**`laneidx`**] refers to a lane within a 128-bit vector.
 ///
