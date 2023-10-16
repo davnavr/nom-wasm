@@ -10,7 +10,7 @@ mod verbose_error;
 pub use crate::isa::{InvalidInstr, InvalidOpcode};
 pub use cause::{
     ErrorCause, ImportComponent, InvalidFlags, InvalidFlagsValue, InvalidTag, LengthMismatch,
-    LimitsComponent,
+    LimitsComponent, MemArgComponent,
 };
 #[doc(no_inline)]
 pub use nom::error::ErrorKind;
