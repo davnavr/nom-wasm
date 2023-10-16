@@ -28,3 +28,7 @@ impl core::fmt::Display for InvalidInstr {
         }
     }
 }
+
+#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+#[cfg(feature = "std")]
+impl std::error::Error for InvalidInstr {}

@@ -346,3 +346,20 @@ impl Display for ErrorCause {
         }
     }
 }
+
+#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+#[cfg(feature = "std")]
+impl std::error::Error for ErrorCause {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(match self {
+            Self::InvalidTag(e) => e,
+            Self::InvalidFlags(e) => e,
+            Self::NameEncoding(e) => e,
+            Self::ModuleSectionOrder(e) => e,
+            Self::Opcode(e) => e,
+            Self::Instr { reason, .. } => reason,
+            Self::Expr(e) => e,
+            _ => return None,
+        })
+    }
+}
