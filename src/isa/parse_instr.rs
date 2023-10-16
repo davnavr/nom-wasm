@@ -28,29 +28,25 @@ impl<E: core::fmt::Display> core::fmt::Display for ParseInstrError<E> {
 /// Result type used by the [`ParseInstr`] trait's methods.
 pub type Result<T, E> = core::result::Result<T, ParseInstrError<E>>;
 
-macro_rules! parse_instr_method_definition {
-    (br_table { targets: BrTableTargets }) => {
+macro_rules! instr_method_define_default {
+    ($name:ident($($($parameter:ident: $parameter_ty:ty),+)?)) => {
         #[inline]
-        fn br_table(&mut self, targets: &mut isa::BrTableTargets<'a, E>) -> Result<(), ParseInstrError<E>> {
-            let _ = targets;
+        fn $name(&mut self $(, $($parameter: $parameter_ty),+)?) -> Result<(), ParseInstrError<E>> {
+            $($(let _ = $parameter;)*)?
             Err(ParseInstrError::Unrecognized)
         }
     };
-    (select_typed { types: SelectTypes }) => {
-        #[inline]
-        fn select_typed(&mut self, types: &mut isa::SelectTypes<'a, E>) -> Result<(), ParseInstrError<E>> {
-            let _ = types;
-            Err(ParseInstrError::Unrecognized)
-        }
+}
+
+macro_rules! instr_method_declaration {
+    ($macro_name:ident(br_table { targets: BrTableTargets })) => {
+        $macro_name!(br_table(targets: &mut isa::BrTableTargets<'a, E>));
     };
-    ($snake_ident:ident $({ $($field_name:ident: $field_type:ident),+ })?) => {
-        #[inline]
-        fn $snake_ident(&mut self $(, $($field_name: $field_type),+ )?) -> Result<(), ParseInstrError<E>> {
-            $(
-                $(let _ = $field_name;)+
-            )?
-            Err(ParseInstrError::Unrecognized)
-        }
+    ($macro_name:ident(select_typed { types: SelectTypes })) => {
+        $macro_name!(select_typed(types: &mut isa::SelectTypes<'a, E>));
+    };
+    ($macro_name:ident($name:ident $({ $($field_name:ident: $field_type:ident),+ })?)) => {
+        $macro_name!($name($($($field_name: $field_type),+)?));
     };
 }
 
@@ -59,7 +55,7 @@ macro_rules! parse_instr_method {
         $opcode_case:ident $wasm_name:literal $pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;
     )*) => {
         $(
-            parse_instr_method_definition!($snake_ident $({ $($field_name: $field_type),+ })?);
+            instr_method_declaration!(instr_method_define_default($snake_ident $({ $($field_name: $field_type),+ })?));
         )*
     };
 }
@@ -73,3 +69,30 @@ pub trait ParseInstr<'a, E: ErrorSource<'a>> {
 }
 
 impl<'a, E: ErrorSource<'a>> ParseInstr<'a, E> for () {}
+
+macro_rules! instr_method_define_delegate {
+    ($name:ident($($($parameter:ident: $parameter_ty:ty),+)?)) => {
+        #[inline]
+        fn $name(&mut self $(, $($parameter: $parameter_ty),+)?) -> Result<(), ParseInstrError<E>> {
+            <P>::$name(self $(, $($parameter),+)?)
+        }
+    };
+}
+
+macro_rules! parse_instr_delegate_method {
+    ($(
+        $opcode_case:ident $wasm_name:literal $pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;
+    )*) => {
+        $(
+            instr_method_declaration!(instr_method_define_delegate($snake_ident $({ $($field_name: $field_type),+ })?));
+        )*
+    };
+}
+
+impl<'a, E, P> ParseInstr<'a, E> for &mut P
+where
+    E: ErrorSource<'a>,
+    P: ParseInstr<'a, E>,
+{
+    crate::isa::instr_definitions::all!(parse_instr_delegate_method);
+}
