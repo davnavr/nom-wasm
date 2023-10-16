@@ -30,61 +30,61 @@ macro_rules! all {
             Byte /*mvp*/ "if" If { block_type: BlockType }  r#if;
             Byte /*mvp*/ "else" Else r#else;
             Byte /*mvp*/ "end" End end;
-            Byte /*mvp*/ "br" Br br;
-            Byte /*mvp*/ "br_if" BrIf br_if;
-            Byte /*mvp*/ "br_table" BrTable br_table;
+            Byte /*mvp*/ "br" Br { target: LabelIdx } br;
+            Byte /*mvp*/ "br_if" BrIf { target: LabelIdx } br_if;
+            Byte /*mvp*/ "br_table" BrTable br_table; // TODO: BrTableTargets
             Byte /*mvp*/ "return" Return r#return;
-            Byte /*mvp*/ "call" Call call;
-            Byte /*mvp*/ "call_indirect" CallIndirect call_indirect;
+            Byte /*mvp*/ "call" Call { callee: FuncIdx } call;
+            Byte /*mvp*/ "call_indirect" CallIndirect { signature: TypeIdx, table: TableIdx } call_indirect;
 
             // MVP, Parametric
 
             Byte /*mvp*/ "drop" Drop r#drop;
             Byte /*mvp*/ "select" Select select;
-            Byte /*mvp*/ "select" SelectTyped select_typed;
+            Byte /*mvp*/ "select" SelectTyped select_typed; // TODO: SelectTypes
 
             // MVP, Variable
 
-            Byte /*mvp*/ "local.get" LocalGet local_get;
-            Byte /*mvp*/ "local.set" LocalSet local_set;
-            Byte /*mvp*/ "local.tee" LocalTee local_tee;
-            Byte /*mvp*/ "global.get" GlobalGet global_get;
-            Byte /*mvp*/ "global.set" GlobalSet global_set;
+            Byte /*mvp*/ "local.get" LocalGet { local: LocalIdx } local_get;
+            Byte /*mvp*/ "local.set" LocalSet { local: LocalIdx } local_set;
+            Byte /*mvp*/ "local.tee" LocalTee { local: LocalIdx } local_tee;
+            Byte /*mvp*/ "global.get" GlobalGet { r#global: GlobalIdx } global_get;
+            Byte /*mvp*/ "global.set" GlobalSet { r#global: GlobalIdx } global_set;
 
             // MVP, Memory
 
-            Byte /*mvp*/ "i32.load" I32Load i32_load;
-            Byte /*mvp*/ "i64.load" I64Load i64_load;
-            Byte /*mvp*/ "f32.load" F32Load f32_load;
-            Byte /*mvp*/ "f64.load" F64Load f64_load;
-            Byte /*mvp*/ "i32.load8_s" I32Load8S i32_load8_s;
-            Byte /*mvp*/ "i32.load8_u" I32Load8U i32_load8_u;
-            Byte /*mvp*/ "i32.load16_s" I32Load16S i32_load16_s;
-            Byte /*mvp*/ "i32.load16_u" I32Load16U i32_load16_u;
-            Byte /*mvp*/ "i64.load8_s" I64Load8S i64_load8_s;
-            Byte /*mvp*/ "i64.load8_u" I64Load8U i64_load8_u;
-            Byte /*mvp*/ "i64.load16_s" I64Load16S i64_load16_s;
-            Byte /*mvp*/ "i64.load16_u" I64Load16U i64_load16_u;
-            Byte /*mvp*/ "i64.load32_s" I64Load32S i64_load32_s;
-            Byte /*mvp*/ "i64.load32_u" I64Load32U i64_load32_u;
-            Byte /*mvp*/ "i32.store" I32Store i32_store;
-            Byte /*mvp*/ "i64.store" I64Store i64_store;
-            Byte /*mvp*/ "f32.store" F32Store f32_store;
-            Byte /*mvp*/ "f64.store" F64Store f64_store;
-            Byte /*mvp*/ "i32.store8" I32Store8 i32_store8;
-            Byte /*mvp*/ "i32.store16" I32Store16 i32_store16;
-            Byte /*mvp*/ "i64.store8" I64Store8 i64_store8;
-            Byte /*mvp*/ "i64.store16" I64Store16 i64_store16;
-            Byte /*mvp*/ "i64.store32" I64Store32 i64_store32;
-            Byte /*mvp*/ "memory.size" MemorySize memory_size;
-            Byte /*mvp*/ "memory.grow" MemoryGrow memory_grow;
+            Byte /*mvp*/ "i32.load" I32Load { arg: MemArg } i32_load;
+            Byte /*mvp*/ "i64.load" I64Load { arg: MemArg } i64_load;
+            Byte /*mvp*/ "f32.load" F32Load { arg: MemArg } f32_load;
+            Byte /*mvp*/ "f64.load" F64Load { arg: MemArg } f64_load;
+            Byte /*mvp*/ "i32.load8_s" I32Load8S { arg: MemArg } i32_load8_s;
+            Byte /*mvp*/ "i32.load8_u" I32Load8U { arg: MemArg } i32_load8_u;
+            Byte /*mvp*/ "i32.load16_s" I32Load16S { arg: MemArg } i32_load16_s;
+            Byte /*mvp*/ "i32.load16_u" I32Load16U { arg: MemArg } i32_load16_u;
+            Byte /*mvp*/ "i64.load8_s" I64Load8S { arg: MemArg } i64_load8_s;
+            Byte /*mvp*/ "i64.load8_u" I64Load8U { arg: MemArg } i64_load8_u;
+            Byte /*mvp*/ "i64.load16_s" I64Load16S { arg: MemArg } i64_load16_s;
+            Byte /*mvp*/ "i64.load16_u" I64Load16U { arg: MemArg } i64_load16_u;
+            Byte /*mvp*/ "i64.load32_s" I64Load32S { arg: MemArg } i64_load32_s;
+            Byte /*mvp*/ "i64.load32_u" I64Load32U { arg: MemArg } i64_load32_u;
+            Byte /*mvp*/ "i32.store" I32Store { arg: MemArg } i32_store;
+            Byte /*mvp*/ "i64.store" I64Store { arg: MemArg } i64_store;
+            Byte /*mvp*/ "f32.store" F32Store { arg: MemArg } f32_store;
+            Byte /*mvp*/ "f64.store" F64Store { arg: MemArg } f64_store;
+            Byte /*mvp*/ "i32.store8" I32Store8 { arg: MemArg } i32_store8;
+            Byte /*mvp*/ "i32.store16" I32Store16 { arg: MemArg } i32_store16;
+            Byte /*mvp*/ "i64.store8" I64Store8 { arg: MemArg } i64_store8;
+            Byte /*mvp*/ "i64.store16" I64Store16 { arg: MemArg } i64_store16;
+            Byte /*mvp*/ "i64.store32" I64Store32 { arg: MemArg } i64_store32;
+            Byte /*mvp*/ "memory.size" MemorySize { memory: MemIdx } memory_size;
+            Byte /*mvp*/ "memory.grow" MemoryGrow { memory: MemIdx } memory_grow;
 
             // MVP, Numeric
 
-            Byte /*mvp*/ "i32.const" I32Const i32_const;
-            Byte /*mvp*/ "i64.const" I64Const i64_const;
-            Byte /*mvp*/ "f32.const" F32Const f32_const;
-            Byte /*mvp*/ "f64.const" F64Const f64_const;
+            Byte /*mvp*/ "i32.const" I32Const { n: i32 } i32_const;
+            Byte /*mvp*/ "i64.const" I64Const { n: i64 } i64_const;
+            Byte /*mvp*/ "f32.const" F32Const { z: f32 } f32_const; // TODO: float constants should be a separate struct F32([u8; 4])
+            Byte /*mvp*/ "f64.const" F64Const { z: f64 } f64_const; // TODO: float constants should be a separate struct F64([u8; 8])
             Byte /*mvp*/ "i32.eqz" I32Eqz i32_eqz;
             Byte /*mvp*/ "i32.eq" I32Eq i32_eq;
             Byte /*mvp*/ "i32.ne" I32Ne i32_ne;
@@ -230,60 +230,60 @@ macro_rules! all {
 
             // Bulk Memory, Memory
 
-            FCPrefixed /*bulk_memory*/ "memory.copy" MemoryCopy memory_copy;
-            FCPrefixed /*bulk_memory*/ "memory.fill" MemoryFill memory_fill;
-            FCPrefixed /*bulk_memory*/ "memory.init" MemoryInit memory_init;
-            FCPrefixed /*bulk_memory*/ "data.drop" DataDrop data_drop;
+            FCPrefixed /*bulk_memory*/ "memory.copy" MemoryCopy { destination: MemIdx, source: MemIdx } memory_copy;
+            FCPrefixed /*bulk_memory*/ "memory.fill" MemoryFill { memory: MemIdx } memory_fill;
+            FCPrefixed /*bulk_memory*/ "memory.init" MemoryInit { segment: DataIdx, memory: MemIdx } memory_init;
+            FCPrefixed /*bulk_memory*/ "data.drop" DataDrop { segment: DataIdx } data_drop;
 
             // Bulk Memory, Table
 
-            FCPrefixed /*bulk_memory*/ "table.copy" TableCopy table_copy;
-            FCPrefixed /*bulk_memory*/ "table.init" TableInit table_init;
-            FCPrefixed /*bulk_memory*/ "elem.drop" ElemDrop elem_drop;
+            FCPrefixed /*bulk_memory*/ "table.copy" TableCopy { destination: TableIdx, source: TableIdx } table_copy;
+            FCPrefixed /*bulk_memory*/ "table.init" TableInit { segment: ElemIdx, table: TableIdx } table_init;
+            FCPrefixed /*bulk_memory*/ "elem.drop" ElemDrop { segment: ElemIdx } elem_drop;
 
             // Reference Type, Reference
 
-            Byte /*reference_types*/ "ref.null" RefNull ref_null;
+            Byte /*reference_types*/ "ref.null" RefNull { reference_type: RefType } ref_null;
             Byte /*reference_types*/ "ref.is_null" RefIsNull ref_is_null;
-            Byte /*reference_types*/ "ref.func" RefFunc ref_func;
+            Byte /*reference_types*/ "ref.func" RefFunc { target: FuncIdx } ref_func;
 
             // Reference Type, Table
 
-            Byte /*reference_types*/ "table.get" TableGet table_get;
-            Byte /*reference_types*/ "table.set" TableSet table_set;
-            FCPrefixed /*reference_types*/ "table.size" TableSize table_size;
-            FCPrefixed /*reference_types*/ "table.grow" TableGrow table_grow;
-            FCPrefixed /*reference_types*/ "table.fill" TableFill table_fill;
+            Byte /*reference_types*/ "table.get" TableGet { table: TableIdx } table_get;
+            Byte /*reference_types*/ "table.set" TableSet { table: TableIdx } table_set;
+            FCPrefixed /*reference_types*/ "table.size" TableSize { table: TableIdx } table_size;
+            FCPrefixed /*reference_types*/ "table.grow" TableGrow { table: TableIdx } table_grow;
+            FCPrefixed /*reference_types*/ "table.fill" TableFill { table: TableIdx } table_fill;
 
             // Fixed Width SIMD, Memory
 
-            V128 /*simd128*/ "v128.load" V128Load v128_load;
-            V128 /*simd128*/ "v128.load8x8_s" V128Load8x8S v128_load8x8_s;
-            V128 /*simd128*/ "v128.load8x8_u" V128Load8x8U v128_load8x8_u;
-            V128 /*simd128*/ "v128.load16x4_s" V128Load16x4S v128_load16x4_s;
-            V128 /*simd128*/ "v128.load16x4_u" V128Load16x4U v128_load16x4_u;
-            V128 /*simd128*/ "v128.load32x2_s" V128Load32x2S v128_load32x2_s;
-            V128 /*simd128*/ "v128.load32x2_u" V128Load32x2U v128_load32x2_u;
-            V128 /*simd128*/ "v128.load8_splat" V128Load8Splat v128_load8_splat;
-            V128 /*simd128*/ "v128.load16_splat" V128Load16Splat v128_load16_splat;
-            V128 /*simd128*/ "v128.load32_splat" V128Load32Splat v128_load32_splat;
-            V128 /*simd128*/ "v128.load64_splat" V128Load64Splat v128_load64_splat;
-            V128 /*simd128*/ "v128.load32_zero" V128Load32Zero v128_load32_zero;
-            V128 /*simd128*/ "v128.load64_zero" V128Load64Zero v128_load64_zero;
-            V128 /*simd128*/ "v128.store" V128Store v128_store;
-            V128 /*simd128*/ "v128.load8_lane" V128Load8Lane v128_load8_lane;
-            V128 /*simd128*/ "v128.load16_lane" V128Load16Lane v128_load16_lane;
-            V128 /*simd128*/ "v128.load32_lane" V128Load32Lane v128_load32_lane;
-            V128 /*simd128*/ "v128.load64_lane" V128Load64Lane v128_load64_lane;
-            V128 /*simd128*/ "v128.store8_lane" V128Store8Lane v128_store8_lane;
-            V128 /*simd128*/ "v128.store16_lane" V128Store16Lane v128_store16_lane;
-            V128 /*simd128*/ "v128.store32_lane" V128Store32Lane v128_store32_lane;
-            V128 /*simd128*/ "v128.store64_lane" V128Store64Lane v128_store64_lane;
+            V128 /*simd128*/ "v128.load" V128Load { arg: MemArg } v128_load;
+            V128 /*simd128*/ "v128.load8x8_s" V128Load8x8S { arg: MemArg } v128_load8x8_s;
+            V128 /*simd128*/ "v128.load8x8_u" V128Load8x8U { arg: MemArg } v128_load8x8_u;
+            V128 /*simd128*/ "v128.load16x4_s" V128Load16x4S { arg: MemArg } v128_load16x4_s;
+            V128 /*simd128*/ "v128.load16x4_u" V128Load16x4U { arg: MemArg } v128_load16x4_u;
+            V128 /*simd128*/ "v128.load32x2_s" V128Load32x2S { arg: MemArg } v128_load32x2_s;
+            V128 /*simd128*/ "v128.load32x2_u" V128Load32x2U { arg: MemArg } v128_load32x2_u;
+            V128 /*simd128*/ "v128.load8_splat" V128Load8Splat { arg: MemArg } v128_load8_splat;
+            V128 /*simd128*/ "v128.load16_splat" V128Load16Splat { arg: MemArg } v128_load16_splat;
+            V128 /*simd128*/ "v128.load32_splat" V128Load32Splat { arg: MemArg } v128_load32_splat;
+            V128 /*simd128*/ "v128.load64_splat" V128Load64Splat { arg: MemArg } v128_load64_splat;
+            V128 /*simd128*/ "v128.load32_zero" V128Load32Zero { arg: MemArg } v128_load32_zero;
+            V128 /*simd128*/ "v128.load64_zero" V128Load64Zero { arg: MemArg } v128_load64_zero;
+            V128 /*simd128*/ "v128.store" V128Store { arg: MemArg } v128_store;
+            V128 /*simd128*/ "v128.load8_lane" V128Load8Lane { arg: MemArg, lane: LaneIdx } v128_load8_lane;
+            V128 /*simd128*/ "v128.load16_lane" V128Load16Lane { arg: MemArg, lane: LaneIdx } v128_load16_lane;
+            V128 /*simd128*/ "v128.load32_lane" V128Load32Lane { arg: MemArg, lane: LaneIdx } v128_load32_lane;
+            V128 /*simd128*/ "v128.load64_lane" V128Load64Lane { arg: MemArg, lane: LaneIdx } v128_load64_lane;
+            V128 /*simd128*/ "v128.store8_lane" V128Store8Lane { arg: MemArg, lane: LaneIdx } v128_store8_lane;
+            V128 /*simd128*/ "v128.store16_lane" V128Store16Lane { arg: MemArg, lane: LaneIdx } v128_store16_lane;
+            V128 /*simd128*/ "v128.store32_lane" V128Store32Lane { arg: MemArg, lane: LaneIdx } v128_store32_lane;
+            V128 /*simd128*/ "v128.store64_lane" V128Store64Lane { arg: MemArg, lane: LaneIdx } v128_store64_lane;
 
             // Fixed Width SIMD, Vector
 
-            V128 /*simd128*/ "v128.const" V128Const v128_const;
-            V128 /*simd128*/ "i8x16.shuffle" I8x16Shuffle i8x16_shuffle;
+            V128 /*simd128*/ "v128.const" V128Const v128_const; // TODO: 128-bit vector constants should be a separate struct V128(pub [u8; 16])
+            V128 /*simd128*/ "i8x16.shuffle" I8x16Shuffle /*{ lanes: [LaneIdx; 16] }*/ i8x16_shuffle; // TODO: Separate struct [LaneIdx; 16]
             V128 /*simd128*/ "i8x16.swizzle" I8x16Swizzle i8x16_swizzle;
             V128 /*simd128*/ "i8x16.splat" I8x16Splat i8x16_splat;
             V128 /*simd128*/ "i16x8.splat" I16x8Splat i16x8_splat;
@@ -291,20 +291,20 @@ macro_rules! all {
             V128 /*simd128*/ "i64x2.splat" I64x2Splat i64x2_splat;
             V128 /*simd128*/ "f32x4.splat" F32x4Splat f32x4_splat;
             V128 /*simd128*/ "f64x2.splat" F64x2Splat f64x2_splat;
-            V128 /*simd128*/ "i8x16.extract_lane_s" I8x16ExtractLaneS i8x16_extract_lane_s;
-            V128 /*simd128*/ "i8x16.extract_lane_u" I8x16ExtractLaneU i8x16_extract_lane_u;
-            V128 /*simd128*/ "i8x16.replace_lane" I8x16ReplaceLane i8x16_replace_lane;
-            V128 /*simd128*/ "i16x8.extract_lane_s" I16x8ExtractLaneS i16x8_extract_lane_s;
-            V128 /*simd128*/ "i16x8.extract_lane_u" I16x8ExtractLaneU i16x8_extract_lane_u;
-            V128 /*simd128*/ "i16x8.replace_lane" I16x8ReplaceLane i16x8_replace_lane;
-            V128 /*simd128*/ "i32x4.extract_lane" I32x4ExtractLane i32x4_extract_lane;
-            V128 /*simd128*/ "i32x4.replace_lane" I32x4ReplaceLane i32x4_replace_lane;
-            V128 /*simd128*/ "i64x2.extract_lane" I64x2ExtractLane i64x2_extract_lane;
-            V128 /*simd128*/ "i64x2.replace_lane" I64x2ReplaceLane i64x2_replace_lane;
-            V128 /*simd128*/ "f32x4.extract_lane" F32x4ExtractLane f32x4_extract_lane;
-            V128 /*simd128*/ "f32x4.replace_lane" F32x4ReplaceLane f32x4_replace_lane;
-            V128 /*simd128*/ "f64x4.extract_lane" F64x2ExtractLane f64x4_extract_lane;
-            V128 /*simd128*/ "f64x4.replace_lane" F64x2ReplaceLane f64x4_replace_lane;
+            V128 /*simd128*/ "i8x16.extract_lane_s" I8x16ExtractLaneS { lane: LaneIdx } i8x16_extract_lane_s;
+            V128 /*simd128*/ "i8x16.extract_lane_u" I8x16ExtractLaneU { lane: LaneIdx } i8x16_extract_lane_u;
+            V128 /*simd128*/ "i8x16.replace_lane" I8x16ReplaceLane { lane: LaneIdx } i8x16_replace_lane;
+            V128 /*simd128*/ "i16x8.extract_lane_s" I16x8ExtractLaneS { lane: LaneIdx } i16x8_extract_lane_s;
+            V128 /*simd128*/ "i16x8.extract_lane_u" I16x8ExtractLaneU { lane: LaneIdx } i16x8_extract_lane_u;
+            V128 /*simd128*/ "i16x8.replace_lane" I16x8ReplaceLane { lane: LaneIdx } i16x8_replace_lane;
+            V128 /*simd128*/ "i32x4.extract_lane" I32x4ExtractLane { lane: LaneIdx } i32x4_extract_lane;
+            V128 /*simd128*/ "i32x4.replace_lane" I32x4ReplaceLane { lane: LaneIdx } i32x4_replace_lane;
+            V128 /*simd128*/ "i64x2.extract_lane" I64x2ExtractLane { lane: LaneIdx } i64x2_extract_lane;
+            V128 /*simd128*/ "i64x2.replace_lane" I64x2ReplaceLane { lane: LaneIdx } i64x2_replace_lane;
+            V128 /*simd128*/ "f32x4.extract_lane" F32x4ExtractLane { lane: LaneIdx } f32x4_extract_lane;
+            V128 /*simd128*/ "f32x4.replace_lane" F32x4ReplaceLane { lane: LaneIdx } f32x4_replace_lane;
+            V128 /*simd128*/ "f64x4.extract_lane" F64x2ExtractLane { lane: LaneIdx } f64x4_extract_lane;
+            V128 /*simd128*/ "f64x4.replace_lane" F64x2ReplaceLane { lane: LaneIdx } f64x4_replace_lane;
             V128 /*simd128*/ "i8x16.eq" I8x16Eq i8x16_eq;
             V128 /*simd128*/ "i8x16.ne" I8x16Ne i8x16_ne;
             V128 /*simd128*/ "i8x16.lt_s" I8x16LtS i8x16_lt_s;
@@ -499,85 +499,85 @@ macro_rules! all {
 
             // Tail Call, Control
 
-            Byte /*tail_call*/ "return_call" ReturnCall return_call;
-            Byte /*tail_call*/ "return_call_indirect" ReturnCallIndirect return_call_indirect;
+            Byte /*tail_call*/ "return_call" ReturnCall { callee: FuncIdx } return_call;
+            Byte /*tail_call*/ "return_call_indirect" ReturnCallIndirect { signature: TypeIdx, table: TableIdx } return_call_indirect;
 
             // Threads, Memory
 
-            FEPrefixed  /*atomics*/ "memory.atomic.notify" MemoryAtomicNotify memory_atomic_notify;
-            FEPrefixed  /*atomics*/ "memory.atomic.wait32" MemoryAtomicWait32 memory_atomic_wait32;
-            FEPrefixed  /*atomics*/ "memory.atomic.wait64" MemoryAtomicWait64 memory_atomic_wait64;
-            FEPrefixed  /*atomics*/ "i32.atomic.load" I32AtomicLoad i32_atomic_load;
-            FEPrefixed  /*atomics*/ "i64.atomic.load" I64AtomicLoad i64_atomic_load;
-            FEPrefixed  /*atomics*/ "i32.atomic.load8_u" I32AtomicLoad8U i32_atomic_load8_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.load16_u" I32AtomicLoad16U i32_atomic_load16_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.load8_u" I64AtomicLoad8U i64_atomic_load8_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.load16_u" I64AtomicLoad16U i64_atomic_load16_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.load32_u" I64AtomicLoad32U i64_atomic_load32_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.store" I32AtomicStore i32_atomic_store;
-            FEPrefixed  /*atomics*/ "i64.atomic.store" I64AtomicStore i64_atomic_store;
-            FEPrefixed  /*atomics*/ "i32.atomic.store8_u" I32AtomicStore8U i32_atomic_store8_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.store16_u" I32AtomicStore16U i32_atomic_store16_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.store8_u" I64AtomicStore8U i64_atomic_store8_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.store16_u" I64AtomicStore16U i64_atomic_store16_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.store32_u" I64AtomicStore32U i64_atomic_store32_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw.add" I32AtomicRmwAdd i32_atomic_rmw_add;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw.add" I64AtomicRmwAdd i64_atomic_rmw_add;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw8.add_u" I32AtomicRmw8AddU i32_atomic_rmw8_add_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw16.add_u" I32AtomicRmw16AddU i32_atomic_rmw16_add_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw8.add_u" I64AtomicRmw8AddU i64_atomic_rmw8_add_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw16.add_u" I64AtomicRmw16AddU i64_atomic_rmw16_add_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw32.add_u" I64AtomicRmw32AddU i64_atomic_rmw32_add_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw.sub" I32AtomicRmwSub i32_atomic_rmw_sub;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw.sub" I64AtomicRmwSub i64_atomic_rmw_sub;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw8.sub_u" I32AtomicRmw8SubU i32_atomic_rmw8_sub_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw16.sub_u" I32AtomicRmw16SubU i32_atomic_rmw16_sub_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw8.sub_u" I64AtomicRmw8SubU i64_atomic_rmw8_sub_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw16.sub_u" I64AtomicRmw16SubU i64_atomic_rmw16_sub_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw32.sub_u" I64AtomicRmw32SubU i64_atomic_rmw32_sub_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw.and" I32AtomicRmwAnd i32_atomic_rmw_and;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw.and" I64AtomicRmwAnd i64_atomic_rmw_and;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw8.and_u" I32AtomicRmw8AndU i32_atomic_rmw8_and_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw16.and_u" I32AtomicRmw16AndU i32_atomic_rmw16_and_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw8.and_u" I64AtomicRmw8AndU i64_atomic_rmw8_and_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw16.and_u" I64AtomicRmw16AndU i64_atomic_rmw16_and_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw32.and_u" I64AtomicRmw32AndU i64_atomic_rmw32_and_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw.or" I32AtomicRmwOr i32_atomic_rmw_or;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw.or" I64AtomicRmwOr i64_atomic_rmw_or;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw8.or_u" I32AtomicRmw8OrU i32_atomic_rmw8_or_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw16.or_u" I32AtomicRmw16OrU i32_atomic_rmw16_or_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw8.or_u" I64AtomicRmw8OrU i64_atomic_rmw8_or_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw16.or_u" I64AtomicRmw16OrU i64_atomic_rmw16_or_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw32.or_u" I64AtomicRmw32OrU i64_atomic_rmw32_or_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw.xor" I32AtomicRmwXor i32_atomic_rmw_xor;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw.xor" I64AtomicRmwXor i64_atomic_rmw_xor;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw8.xor_u" I32AtomicRmw8XorU i32_atomic_rmw8_xor_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw16.xor_u" I32AtomicRmw16XorU i32_atomic_rmw16_xor_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw8.xor_u" I64AtomicRmw8XorU i64_atomic_rmw8_xor_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw16.xor_u" I64AtomicRmw16XorU i64_atomic_rmw16_xor_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw32.xor_u" I64AtomicRmw32XorU i64_atomic_rmw32_xor_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw.xchg" I32AtomicRmwXchg i32_atomic_rmw_xchg;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw.xchg" I64AtomicRmwXchg i64_atomic_rmw_xchg;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw8.xchg_u" I32AtomicRmw8XchgU i32_atomic_rmw8_xchg_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw16.xchg_u" I32AtomicRmw16XchgU i32_atomic_rmw16_xchg_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw8.xchg_u" I64AtomicRmw8XchgU i64_atomic_rmw8_xchg_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw16.xchg_u" I64AtomicRmw16XchgU i64_atomic_rmw16_xchg_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw32.xchg_u" I64AtomicRmw32XchgU i64_atomic_rmw32_xchg_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw.cmpxchg" I32AtomicRmwCmpxchg i32_atomic_rmw_cmpxchg;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw.cmpxchg" I64AtomicRmwCmpxchg i64_atomic_rmw_cmpxchg;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw8.cmpxchg_u" I32AtomicRmw8CmpxchgU i32_atomic_rmw8_cmpxchg_u;
-            FEPrefixed  /*atomics*/ "i32.atomic.rmw16.cmpxchg_u" I32AtomicRmw16CmpxchgU i32_atomic_rmw16_cmpxchg_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw8.cmpxchg_u" I64AtomicRmw8CmpxchgU i64_atomic_rmw8_cmpxchg_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw16.cmpxchg_u" I64AtomicRmw16CmpxchgU i64_atomic_rmw16_cmpxchg_u;
-            FEPrefixed  /*atomics*/ "i64.atomic.rmw32.cmpxchg_u" I64AtomicRmw32CmpxchgU i64_atomic_rmw32_cmpxchg_u;
+            FEPrefixed  /*atomics*/ "memory.atomic.notify" MemoryAtomicNotify { arg: MemArg } memory_atomic_notify;
+            FEPrefixed  /*atomics*/ "memory.atomic.wait32" MemoryAtomicWait32 { arg: MemArg } memory_atomic_wait32;
+            FEPrefixed  /*atomics*/ "memory.atomic.wait64" MemoryAtomicWait64 { arg: MemArg } memory_atomic_wait64;
+            FEPrefixed  /*atomics*/ "i32.atomic.load" I32AtomicLoad { arg: MemArg } i32_atomic_load;
+            FEPrefixed  /*atomics*/ "i64.atomic.load" I64AtomicLoad { arg: MemArg } i64_atomic_load;
+            FEPrefixed  /*atomics*/ "i32.atomic.load8_u" I32AtomicLoad8U { arg: MemArg } i32_atomic_load8_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.load16_u" I32AtomicLoad16U { arg: MemArg } i32_atomic_load16_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.load8_u" I64AtomicLoad8U { arg: MemArg } i64_atomic_load8_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.load16_u" I64AtomicLoad16U { arg: MemArg } i64_atomic_load16_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.load32_u" I64AtomicLoad32U { arg: MemArg } i64_atomic_load32_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.store" I32AtomicStore { arg: MemArg } i32_atomic_store;
+            FEPrefixed  /*atomics*/ "i64.atomic.store" I64AtomicStore { arg: MemArg } i64_atomic_store;
+            FEPrefixed  /*atomics*/ "i32.atomic.store8_u" I32AtomicStore8U { arg: MemArg } i32_atomic_store8_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.store16_u" I32AtomicStore16U { arg: MemArg } i32_atomic_store16_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.store8_u" I64AtomicStore8U { arg: MemArg } i64_atomic_store8_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.store16_u" I64AtomicStore16U { arg: MemArg } i64_atomic_store16_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.store32_u" I64AtomicStore32U { arg: MemArg } i64_atomic_store32_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw.add" I32AtomicRmwAdd { arg: MemArg } i32_atomic_rmw_add;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw.add" I64AtomicRmwAdd { arg: MemArg } i64_atomic_rmw_add;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw8.add_u" I32AtomicRmw8AddU { arg: MemArg } i32_atomic_rmw8_add_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw16.add_u" I32AtomicRmw16AddU { arg: MemArg } i32_atomic_rmw16_add_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw8.add_u" I64AtomicRmw8AddU { arg: MemArg } i64_atomic_rmw8_add_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw16.add_u" I64AtomicRmw16AddU { arg: MemArg } i64_atomic_rmw16_add_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw32.add_u" I64AtomicRmw32AddU { arg: MemArg } i64_atomic_rmw32_add_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw.sub" I32AtomicRmwSub { arg: MemArg } i32_atomic_rmw_sub;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw.sub" I64AtomicRmwSub { arg: MemArg } i64_atomic_rmw_sub;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw8.sub_u" I32AtomicRmw8SubU { arg: MemArg } i32_atomic_rmw8_sub_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw16.sub_u" I32AtomicRmw16SubU { arg: MemArg } i32_atomic_rmw16_sub_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw8.sub_u" I64AtomicRmw8SubU { arg: MemArg } i64_atomic_rmw8_sub_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw16.sub_u" I64AtomicRmw16SubU { arg: MemArg } i64_atomic_rmw16_sub_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw32.sub_u" I64AtomicRmw32SubU { arg: MemArg } i64_atomic_rmw32_sub_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw.and" I32AtomicRmwAnd { arg: MemArg } i32_atomic_rmw_and;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw.and" I64AtomicRmwAnd { arg: MemArg } i64_atomic_rmw_and;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw8.and_u" I32AtomicRmw8AndU { arg: MemArg } i32_atomic_rmw8_and_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw16.and_u" I32AtomicRmw16AndU { arg: MemArg } i32_atomic_rmw16_and_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw8.and_u" I64AtomicRmw8AndU { arg: MemArg } i64_atomic_rmw8_and_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw16.and_u" I64AtomicRmw16AndU { arg: MemArg } i64_atomic_rmw16_and_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw32.and_u" I64AtomicRmw32AndU { arg: MemArg } i64_atomic_rmw32_and_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw.or" I32AtomicRmwOr { arg: MemArg } i32_atomic_rmw_or;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw.or" I64AtomicRmwOr { arg: MemArg } i64_atomic_rmw_or;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw8.or_u" I32AtomicRmw8OrU { arg: MemArg } i32_atomic_rmw8_or_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw16.or_u" I32AtomicRmw16OrU { arg: MemArg } i32_atomic_rmw16_or_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw8.or_u" I64AtomicRmw8OrU { arg: MemArg } i64_atomic_rmw8_or_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw16.or_u" I64AtomicRmw16OrU { arg: MemArg } i64_atomic_rmw16_or_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw32.or_u" I64AtomicRmw32OrU { arg: MemArg } i64_atomic_rmw32_or_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw.xor" I32AtomicRmwXor { arg: MemArg } i32_atomic_rmw_xor;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw.xor" I64AtomicRmwXor { arg: MemArg } i64_atomic_rmw_xor;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw8.xor_u" I32AtomicRmw8XorU { arg: MemArg } i32_atomic_rmw8_xor_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw16.xor_u" I32AtomicRmw16XorU { arg: MemArg } i32_atomic_rmw16_xor_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw8.xor_u" I64AtomicRmw8XorU { arg: MemArg } i64_atomic_rmw8_xor_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw16.xor_u" I64AtomicRmw16XorU { arg: MemArg } i64_atomic_rmw16_xor_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw32.xor_u" I64AtomicRmw32XorU { arg: MemArg } i64_atomic_rmw32_xor_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw.xchg" I32AtomicRmwXchg { arg: MemArg } i32_atomic_rmw_xchg;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw.xchg" I64AtomicRmwXchg { arg: MemArg } i64_atomic_rmw_xchg;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw8.xchg_u" I32AtomicRmw8XchgU { arg: MemArg } i32_atomic_rmw8_xchg_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw16.xchg_u" I32AtomicRmw16XchgU { arg: MemArg } i32_atomic_rmw16_xchg_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw8.xchg_u" I64AtomicRmw8XchgU { arg: MemArg } i64_atomic_rmw8_xchg_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw16.xchg_u" I64AtomicRmw16XchgU { arg: MemArg } i64_atomic_rmw16_xchg_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw32.xchg_u" I64AtomicRmw32XchgU { arg: MemArg } i64_atomic_rmw32_xchg_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw.cmpxchg" I32AtomicRmwCmpxchg { arg: MemArg } i32_atomic_rmw_cmpxchg;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw.cmpxchg" I64AtomicRmwCmpxchg { arg: MemArg } i64_atomic_rmw_cmpxchg;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw8.cmpxchg_u" I32AtomicRmw8CmpxchgU { arg: MemArg } i32_atomic_rmw8_cmpxchg_u;
+            FEPrefixed  /*atomics*/ "i32.atomic.rmw16.cmpxchg_u" I32AtomicRmw16CmpxchgU { arg: MemArg } i32_atomic_rmw16_cmpxchg_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw8.cmpxchg_u" I64AtomicRmw8CmpxchgU { arg: MemArg } i64_atomic_rmw8_cmpxchg_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw16.cmpxchg_u" I64AtomicRmw16CmpxchgU { arg: MemArg } i64_atomic_rmw16_cmpxchg_u;
+            FEPrefixed  /*atomics*/ "i64.atomic.rmw32.cmpxchg_u" I64AtomicRmw32CmpxchgU { arg: MemArg } i64_atomic_rmw32_cmpxchg_u;
 
             // Exception Handling, Control
 
-            Byte /*exception_handling*/ "try" Try r#try;
-            Byte /*exception_handling*/ "catch" Catch r#catch;
-            Byte /*exception_handling*/ "throw" Throw r#throw;
-            Byte /*exception_handling*/ "rethrow" Rethrow rethrow;
-            Byte /*exception_handling*/ "delegate" Delegate delegate;
+            Byte /*exception_handling*/ "try" Try { block_type: BlockType } r#try;
+            Byte /*exception_handling*/ "catch" Catch { exception: TagIdx } r#catch;
+            Byte /*exception_handling*/ "throw" Throw { exception: TagIdx } r#throw;
+            Byte /*exception_handling*/ "rethrow" Rethrow { handler: LabelIdx } rethrow;
+            Byte /*exception_handling*/ "delegate" Delegate { handler: LabelIdx } delegate;
             Byte /*exception_handling*/ "catch_all" CatchAll catch_all;
 
             // Relaxed SIMD, Vector

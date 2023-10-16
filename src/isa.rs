@@ -17,3 +17,8 @@ pub use invalid_opcode::InvalidOpcode;
 pub use mem_arg::{Align, MemArg};
 pub use opcodes::{FCPrefixedOpcode, FEPrefixedOpcode, Opcode, V128Opcode};
 pub use parse_instr::{ParseInstr, ParseInstrError, Result};
+
+/// A WebAssembly [**`laneidx`**] refers to a lane within a 128-bit vector.
+///
+/// [**`laneidx`**]: https://webassembly.github.io/spec/core/binary/instructions.html#vector-instructions
+pub type LaneIdx = u8;

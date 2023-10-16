@@ -1,5 +1,9 @@
-use crate::error::ErrorSource;
-use crate::types::BlockType;
+use crate::{
+    error::ErrorSource,
+    isa::{LabelIdx, LaneIdx, MemArg},
+    module::{DataIdx, ElemIdx, FuncIdx, GlobalIdx, LocalIdx, MemIdx, TableIdx, TagIdx, TypeIdx},
+    types::{BlockType, RefType},
+};
 
 /// Error type used by the [`ParseInstr`] trait's methods.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -51,3 +55,5 @@ macro_rules! parse_instr_method {
 pub trait ParseInstr<'a, E: ErrorSource<'a>> {
     crate::isa::instr_definitions::all!(parse_instr_method);
 }
+
+impl<'a, E: ErrorSource<'a>> ParseInstr<'a, E> for () {}
