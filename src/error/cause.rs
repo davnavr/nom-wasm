@@ -185,6 +185,7 @@ pub enum ErrorCause {
     NameLength,
     NameContents(LengthMismatch),
     NameEncoding(core::str::Utf8Error),
+    Index(&'static &'static str),
     #[non_exhaustive]
     SectionId,
     #[non_exhaustive]
@@ -275,6 +276,7 @@ impl Display for ErrorCause {
             Self::NameLength => f.write_str("expected name length"),
             Self::NameContents(e) => e.print("UTF-8 encoded name", f),
             Self::NameEncoding(e) => write!(f, "invalid name encoding: {e}"),
+            Self::Index(name) => write!(f, "could not parse {name} index"),
             Self::SectionId => f.write_str("missing section ID byte"),
             Self::SectionLength => f.write_str("expected section content length"),
             Self::SectionContents(e) => e.print("section contents", f),
