@@ -1,6 +1,6 @@
 use crate::{
     error::ErrorSource,
-    isa::{LabelIdx, LaneIdx, MemArg},
+    isa::{self, LabelIdx, LaneIdx, MemArg},
     module::{DataIdx, ElemIdx, FuncIdx, GlobalIdx, LocalIdx, MemIdx, TableIdx, TagIdx, TypeIdx},
     types::{BlockType, RefType},
     values::{V128ShuffleLanes, F32, F64, V128},
@@ -29,7 +29,22 @@ impl<E: core::fmt::Display> core::fmt::Display for ParseInstrError<E> {
 pub type Result<T, E> = core::result::Result<T, ParseInstrError<E>>;
 
 macro_rules! parse_instr_method_definition {
-    ($opcode_case:ident $wasm_name:literal $pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;) => {
+    (br_table { targets: BrTableTargets }) => {
+        #[inline]
+        fn br_table(&mut self, targets: &mut isa::BrTableTargets<'a, E>) -> Result<(), ParseInstrError<E>> {
+            let _ = targets;
+            Err(ParseInstrError::Unrecognized)
+        }
+    };
+    (select_typed { types: SelectTypes }) => {
+        #[inline]
+        fn select_typed(&mut self, types: &mut isa::SelectTypes<'a, E>) -> Result<(), ParseInstrError<E>> {
+            let _ = types;
+            Err(ParseInstrError::Unrecognized)
+        }
+    };
+    ($snake_ident:ident $({ $($field_name:ident: $field_type:ident),+ })?) => {
+        #[inline]
         fn $snake_ident(&mut self $(, $($field_name: $field_type),+ )?) -> Result<(), ParseInstrError<E>> {
             $(
                 $(let _ = $field_name;)+
@@ -44,7 +59,7 @@ macro_rules! parse_instr_method {
         $opcode_case:ident $wasm_name:literal $pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;
     )*) => {
         $(
-            parse_instr_method_definition!($opcode_case $wasm_name $pascal_ident $({ $($field_name: $field_type),+ })? $snake_ident;);
+            parse_instr_method_definition!($snake_ident $({ $($field_name: $field_type),+ })?);
         )*
     };
 }

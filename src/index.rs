@@ -46,6 +46,9 @@ where
     }
 }
 
+/// Type alias for an [`Iterator`] that parses a vector of indices.
+pub type IndexVectorParser<'a, I, E> = crate::values::VectorIter<'a, I, E, IndexParser>;
+
 /// Defines wrapper structs that represent a WebAssembly [`Index`].
 ///
 /// The generated structs automatically derive [`Clone`], [`Copy`], [`Eq`], [`Ord`], and [`Hash`],

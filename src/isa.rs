@@ -2,6 +2,7 @@
 //!
 //! [WebAssembly instructions]: https://webassembly.github.io/spec/core/binary/instructions.html
 
+mod br_table_targets;
 mod instr_definitions;
 mod instr_kind;
 mod invalid_instr;
@@ -11,6 +12,7 @@ mod opcodes;
 mod parse_instr;
 
 pub use crate::module::LabelIdx;
+pub use br_table_targets::BrTableTargets;
 pub use instr_kind::InstrKind;
 pub use invalid_instr::InvalidInstr;
 pub use invalid_opcode::InvalidOpcode;
@@ -22,3 +24,9 @@ pub use parse_instr::{ParseInstr, ParseInstrError, Result};
 ///
 /// [**`laneidx`**]: https://webassembly.github.io/spec/core/binary/instructions.html#vector-instructions
 pub type LaneIdx = u8;
+
+/// Parses the types of a [typed `select`] instruction.
+///
+/// [typed `select`]: ParseInstr::select_typed
+pub type SelectTypes<'a, E> =
+    crate::values::VectorIter<'a, crate::types::ValType, E, crate::types::ValTypeParser>;

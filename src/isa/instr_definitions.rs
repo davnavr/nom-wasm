@@ -32,7 +32,7 @@ macro_rules! all {
             Byte /*mvp*/ "end" End end;
             Byte /*mvp*/ "br" Br { target: LabelIdx } br;
             Byte /*mvp*/ "br_if" BrIf { target: LabelIdx } br_if;
-            Byte /*mvp*/ "br_table" BrTable br_table; // TODO: BrTableTargets
+            Byte /*mvp*/ "br_table" BrTable { targets: BrTableTargets } br_table;
             Byte /*mvp*/ "return" Return r#return;
             Byte /*mvp*/ "call" Call { callee: FuncIdx } call;
             Byte /*mvp*/ "call_indirect" CallIndirect { signature: TypeIdx, table: TableIdx } call_indirect;
@@ -41,7 +41,7 @@ macro_rules! all {
 
             Byte /*mvp*/ "drop" Drop r#drop;
             Byte /*mvp*/ "select" Select select;
-            Byte /*mvp*/ "select" SelectTyped select_typed; // TODO: SelectTypes
+            Byte /*mvp*/ "select" SelectTyped { types: SelectTypes } select_typed;
 
             // MVP, Variable
 

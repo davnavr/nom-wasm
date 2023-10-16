@@ -92,8 +92,12 @@ where
 
     /// Gets the remaining `input` and the [`Parser`] used to parse the vector's elements.
     #[inline]
-    pub fn finish(self) -> (&'a [u8], P) {
-        (self.input, self.parser)
+    pub fn finish(mut self) -> Parsed<'a, P, E> {
+        for result in &mut self {
+            let _ = result?;
+        }
+
+        Ok((self.input, self.parser))
     }
 }
 
