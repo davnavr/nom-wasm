@@ -7,11 +7,13 @@ use crate::{
 };
 
 /// Error type used by the [`ParseInstr`] trait's methods.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 #[allow(clippy::exhaustive_enums)]
 pub enum ParseInstrError<E> {
     /// An immediate argument for the parsed instruction could not be parsed.
     ParseFailed(E),
+    #[allow(missing_docs)]
+    Cause(crate::error::ErrorCause),
     /// The [`ParseInstr`] trait does not recognize the instruction that was parsed.
     Unrecognized,
 }
@@ -20,6 +22,7 @@ impl<E: core::fmt::Display> core::fmt::Display for ParseInstrError<E> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::ParseFailed(err) => core::fmt::Display::fmt(err, f),
+            Self::Cause(cause) => core::fmt::Display::fmt(cause, f),
             Self::Unrecognized => f.write_str("instruction was not recognized"),
         }
     }
@@ -50,6 +53,8 @@ macro_rules! instr_method_declaration {
     };
 }
 
+pub(in crate::isa) use instr_method_declaration;
+
 macro_rules! parse_instr_method {
     ($(
         $opcode_case:ident $wasm_name:literal $pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;
@@ -62,13 +67,38 @@ macro_rules! parse_instr_method {
 
 /// Trait for parsing [WebAssembly instructions].
 ///
+/// A WebAssembly instruction can be parsed with a [`ParseInstr`] implementation with the
+/// [`isa::instr()`] parser.
+///
 /// [WebAssembly instructions]: https://webassembly.github.io/spec/core/binary/instructions.html
 #[allow(missing_docs)]
 pub trait ParseInstr<'a, E: ErrorSource<'a>> {
     crate::isa::instr_definitions::all!(parse_instr_method);
 }
 
-impl<'a, E: ErrorSource<'a>> ParseInstr<'a, E> for () {}
+macro_rules! instr_method_define_delegate {
+    ($name:ident($($($parameter:ident: $parameter_ty:ty),+)?)) => {
+        #[inline]
+        fn $name(&mut self $(, $($parameter: $parameter_ty),+)?) -> Result<(), E> {
+            $($(let _ = $parameter;)*)?
+            Ok(())
+        }
+    };
+}
+
+macro_rules! parse_instr_method_noop {
+    ($(
+        $opcode_case:ident $wasm_name:literal $pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;
+    )*) => {
+        $(
+            instr_method_declaration!(instr_method_define_delegate($snake_ident $({ $($field_name: $field_type),+ })?));
+        )*
+    };
+}
+
+impl<'a, E: ErrorSource<'a>> ParseInstr<'a, E> for () {
+    crate::isa::instr_definitions::all!(parse_instr_method_noop);
+}
 
 macro_rules! instr_method_define_delegate {
     ($name:ident($($($parameter:ident: $parameter_ty:ty),+)?)) => {

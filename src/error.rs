@@ -7,7 +7,7 @@ mod cause;
 mod verbose_error;
 
 #[doc(no_inline)]
-pub use crate::isa::{InvalidInstr, InvalidOpcode};
+pub use crate::isa::{InvalidExpr, InvalidInstr, InvalidOpcode};
 pub use cause::{
     ErrorCause, ImportComponent, InvalidFlags, InvalidFlagsValue, InvalidTag, LengthMismatch,
     LimitsComponent, MemArgComponent,

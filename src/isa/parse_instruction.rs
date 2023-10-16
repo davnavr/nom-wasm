@@ -24,14 +24,17 @@ impl<'a, T, E: ErrorSource<'a>> ResultExt<'a, T, E> for isa::Result<T, E> {
                     },
                 )))
             }
+            Err(isa::ParseInstrError::Cause(cause)) => Err(nom::Err::Failure(
+                E::from_error_kind_and_cause(start, ErrorKind::Verify, cause),
+            )),
             Err(isa::ParseInstrError::ParseFailed(err)) => Err(nom::Err::Failure(err)),
         }
     }
 }
 
-/// Parses a [WebAssembly **`instr`**uction].
+/// Parses a [WebAssembly instruction].
 ///
-/// [WebAssembly **`instr`**uction]: https://webassembly.github.io/spec/core/binary/instructions.html
+/// [WebAssembly instruction]: https://webassembly.github.io/spec/core/binary/instructions.html
 pub fn instr<'a, P, E>(input: &'a [u8], mut parser: P) -> crate::Parsed<'a, P, E>
 where
     P: ParseInstr<'a, E>,

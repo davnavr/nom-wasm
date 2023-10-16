@@ -235,6 +235,7 @@ pub enum ErrorCause {
         opcode: crate::isa::InstrKind,
         reason: crate::isa::InvalidInstr,
     },
+    Expr(crate::isa::InvalidExpr),
     MemArg(MemArgComponent),
 }
 
@@ -338,8 +339,9 @@ impl Display for ErrorCause {
             Self::ModuleSectionOrder(order) => Display::fmt(order, f),
             Self::Opcode(bad) => Display::fmt(bad, f),
             Self::Instr { opcode, reason } => {
-                write!(f, "could not parse {opcode} instruction {reason}")
+                write!(f, "could not parse `{opcode}` instruction {reason}")
             }
+            Self::Expr(bad) => Display::fmt(bad, f),
             Self::MemArg(bad) => write!(f, "could not parse memarg: {bad}"),
         }
     }
