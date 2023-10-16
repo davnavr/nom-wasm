@@ -83,8 +83,8 @@ macro_rules! all {
 
             Byte /*mvp*/ "i32.const" I32Const { n: i32 } i32_const;
             Byte /*mvp*/ "i64.const" I64Const { n: i64 } i64_const;
-            Byte /*mvp*/ "f32.const" F32Const { z: f32 } f32_const; // TODO: float constants should be a separate struct F32([u8; 4])
-            Byte /*mvp*/ "f64.const" F64Const { z: f64 } f64_const; // TODO: float constants should be a separate struct F64([u8; 8])
+            Byte /*mvp*/ "f32.const" F32Const { z: F32 } f32_const;
+            Byte /*mvp*/ "f64.const" F64Const { z: F64 } f64_const;
             Byte /*mvp*/ "i32.eqz" I32Eqz i32_eqz;
             Byte /*mvp*/ "i32.eq" I32Eq i32_eq;
             Byte /*mvp*/ "i32.ne" I32Ne i32_ne;
