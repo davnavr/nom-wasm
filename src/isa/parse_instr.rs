@@ -3,7 +3,7 @@ use crate::{
     isa::{LabelIdx, LaneIdx, MemArg},
     module::{DataIdx, ElemIdx, FuncIdx, GlobalIdx, LocalIdx, MemIdx, TableIdx, TagIdx, TypeIdx},
     types::{BlockType, RefType},
-    values::{F32, F64},
+    values::{F32, F64, V128},
 };
 
 /// Error type used by the [`ParseInstr`] trait's methods.

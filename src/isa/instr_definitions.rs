@@ -282,7 +282,7 @@ macro_rules! all {
 
             // Fixed Width SIMD, Vector
 
-            V128 /*simd128*/ "v128.const" V128Const v128_const; // TODO: 128-bit vector constants should be a separate struct V128(pub [u8; 16])
+            V128 /*simd128*/ "v128.const" V128Const { v: V128 } v128_const;
             V128 /*simd128*/ "i8x16.shuffle" I8x16Shuffle /*{ lanes: [LaneIdx; 16] }*/ i8x16_shuffle; // TODO: Separate struct [LaneIdx; 16]
             V128 /*simd128*/ "i8x16.swizzle" I8x16Swizzle i8x16_swizzle;
             V128 /*simd128*/ "i8x16.splat" I8x16Splat i8x16_splat;
