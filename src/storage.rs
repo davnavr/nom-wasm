@@ -37,8 +37,11 @@ pub use vector::Vector;
 
 /// Trait that provides associated types and methods for heap allocations.
 pub trait Heap {
+    /// Type for simple heap allocations.
+    type Box<T: ?Sized>: core::ops::Deref<Target = T> + core::ops::DerefMut<Target = T>;
+
     /// Type used for resizable arrays allocated in this [`Heap`].
-    type Vector<T>: Vector<Item = T>;
+    type Vector<T>: Vector<Item = T, Boxed = Self::Box<[T]>>;
 
     /// Returns an empty [`Vector`].
     #[inline]
@@ -51,6 +54,7 @@ pub trait Heap {
 }
 
 impl<H: Heap> Heap for &H {
+    type Box<T: ?Sized> = H::Box<T>;
     type Vector<T> = H::Vector<T>;
 
     #[inline]

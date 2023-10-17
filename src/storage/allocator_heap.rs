@@ -28,6 +28,7 @@ impl<A: Clone + Allocator> AllocatorHeap<A> {
 }
 
 impl<A: Clone + Allocator> Heap for AllocatorHeap<A> {
+    type Box<T: ?Sized> = allocator_api2::boxed::Box<T, A>;
     type Vector<T> = Vec<T, A>;
 
     #[inline]

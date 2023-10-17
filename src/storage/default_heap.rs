@@ -7,6 +7,7 @@ use alloc::vec::Vec;
 pub struct DefaultHeap;
 
 impl Heap for DefaultHeap {
+    type Box<T: ?Sized> = alloc::boxed::Box<T>;
     type Vector<T> = Vec<T>;
 
     #[inline]
