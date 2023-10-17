@@ -22,5 +22,12 @@ macro_rules! check_size {
     };
 }
 
+macro_rules! object_safe {
+    ($($trait:tt)+) => {
+        const _: core::marker::PhantomData<&'static dyn $($trait)+> = core::marker::PhantomData;
+    };
+}
+
 pub(crate) use check;
 pub(crate) use check_size;
+pub(crate) use object_safe;

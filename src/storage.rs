@@ -12,8 +12,6 @@
 //! [`nom-wasm`]: crate
 //! [`FuncType`]: crate::types::FuncType
 
-use core::ops::{Deref, DerefMut};
-
 /*
 /// Trait for simple heap allocations.
 pub trait Box: Deref<Target = Self::Item> + DerefMut {
@@ -25,153 +23,43 @@ pub trait Box: Deref<Target = Self::Item> + DerefMut {
 }
 */
 
-/// Trait for heap allocated arrays that can be resized.
-pub trait Vector: Deref<Target = [Self::Item]> + DerefMut {
-    /// The item that the vector contains.
-    type Item;
-
-    /// Type for the boxed slice version of this vector.
-    ///
-    /// Used in [`Vector::into_boxed_slice()`].
-    type Boxed: Deref<Target = [Self::Item]> + DerefMut<Target = [Self::Item]>;
-
-    /// Converts the vector into a single heap allocation.
-    fn into_boxed_slice(self) -> Self::Boxed;
-
-    /// Appends an item to the end of the vector.
-    fn push(&mut self, item: Self::Item);
-
-    /// Pops an item from the end of the vector, returning `None` if the vector is empty.
-    fn pop(&mut self) -> Option<Self::Item>;
-
-    /// Returns the total number of items that the vector can contain without reallocating.
-    fn capacity(&self) -> usize;
-
-    /// Drops all of the items in the vector.
-    #[inline]
-    fn clear(&mut self) {
-        while self.pop().is_some() {}
-    }
-
-    /// Reserves space for appending at least `additional` items to the end of the vector.
-    #[inline]
-    fn reserve(&mut self, additional: usize) {
-        let _ = additional;
-    }
-
-    /// Reserve space for appending exactly `additional` items to the end of the vector.
-    #[inline]
-    fn reserve_exact(&mut self, additional: usize) {
-        self.reserve(additional)
-    }
-
-    /// Allocates a new vector that can contain at least `capacity` items without reallocating.
-    fn with_capacity(capacity: usize) -> Self
-    where
-        Self: Default,
-    {
-        let mut vec = Self::default();
-        vec.reserve_exact(capacity);
-        vec
-    }
-}
-
-#[cfg_attr(doc_cfg, doc(cfg(feature = "alloc")))]
-#[cfg(feature = "alloc")]
-impl<T> Vector for alloc::vec::Vec<T> {
-    type Item = T;
-    type Boxed = alloc::boxed::Box<[T]>;
-
-    #[inline]
-    fn into_boxed_slice(self) -> Self::Boxed {
-        <Self>::into_boxed_slice(self)
-    }
-
-    #[inline]
-    fn push(&mut self, item: Self::Item) {
-        <Self>::push(self, item);
-    }
-
-    #[inline]
-    fn pop(&mut self) -> Option<Self::Item> {
-        <Self>::pop(self)
-    }
-
-    #[inline]
-    fn capacity(&self) -> usize {
-        <Self>::capacity(self)
-    }
-
-    #[inline]
-    fn clear(&mut self) {
-        <Self>::clear(self);
-    }
-
-    #[inline]
-    fn reserve(&mut self, additional: usize) {
-        <Self>::reserve(self, additional);
-    }
-
-    #[inline]
-    fn reserve_exact(&mut self, additional: usize) {
-        <Self>::reserve_exact(self, additional);
-    }
-
-    #[inline]
-    fn with_capacity(capacity: usize) -> Self
-    where
-        Self: Default,
-    {
-        <Self>::with_capacity(capacity)
-    }
-}
-
-#[cfg_attr(doc_cfg, doc(cfg(feature = "allocator-api2")))]
 #[cfg(feature = "allocator-api2")]
-impl<T> Vector for allocator_api2::vec::Vec<T> {
-    type Item = T;
-    type Boxed = allocator_api2::boxed::Box<[T]>;
+mod allocator_heap;
+#[cfg(feature = "alloc")]
+mod default_heap;
+mod vector;
+
+#[cfg(feature = "allocator-api2")]
+pub use allocator_heap::AllocatorHeap;
+#[cfg(feature = "alloc")]
+pub use default_heap::DefaultHeap;
+pub use vector::Vector;
+
+/// Trait that provides associated types and methods for heap allocations.
+pub trait Heap {
+    /// Type used for resizable arrays allocated in this [`Heap`].
+    type Vector<T>: Vector<Item = T>;
+
+    /// Returns an empty [`Vector`].
+    #[inline]
+    fn vector<T>(&self) -> Self::Vector<T> {
+        self.vector_with_capacity(0)
+    }
+
+    /// Allocates a new [`Vector`] with sufficient space to contain `capacity` elements.
+    fn vector_with_capacity<T>(&self, capacity: usize) -> Self::Vector<T>;
+}
+
+impl<H: Heap> Heap for &H {
+    type Vector<T> = H::Vector<T>;
 
     #[inline]
-    fn into_boxed_slice(self) -> Self::Boxed {
-        <Self>::into_boxed_slice(self)
+    fn vector<T>(&self) -> Self::Vector<T> {
+        H::vector(self)
     }
 
     #[inline]
-    fn push(&mut self, item: Self::Item) {
-        <Self>::push(self, item);
-    }
-
-    #[inline]
-    fn pop(&mut self) -> Option<Self::Item> {
-        <Self>::pop(self)
-    }
-
-    #[inline]
-    fn capacity(&self) -> usize {
-        <Self>::capacity(self)
-    }
-
-    #[inline]
-    fn clear(&mut self) {
-        <Self>::clear(self);
-    }
-
-    #[inline]
-    fn reserve(&mut self, additional: usize) {
-        <Self>::reserve(self, additional);
-    }
-
-    #[inline]
-    fn reserve_exact(&mut self, additional: usize) {
-        <Self>::reserve_exact(self, additional);
-    }
-
-    #[inline]
-    fn with_capacity(capacity: usize) -> Self
-    where
-        Self: Default,
-    {
-        <Self>::with_capacity(capacity)
+    fn vector_with_capacity<T>(&self, capacity: usize) -> Self::Vector<T> {
+        H::vector_with_capacity(self, capacity)
     }
 }
