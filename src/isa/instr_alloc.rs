@@ -2,31 +2,37 @@ use crate::{
     isa::{LabelIdx, LaneIdx, MemArg},
     module::{DataIdx, ElemIdx, FuncIdx, GlobalIdx, LocalIdx, MemIdx, TableIdx, TagIdx, TypeIdx},
     storage::Heap,
-    types::{BlockType, RefType},
+    types::{BlockType, RefType, ValType},
     values::{V128ShuffleLanes, F32, F64, V128},
 };
 
 macro_rules! instr_enum_cases {
     (@start $($tokens:tt)*) => {
         instr_enum_cases! {
-            <H, f> {} {} $($tokens)*
+            enum<H> {}
+
+            Debug(f) {}
+
+            Clone {}
+
+            $($tokens)*
         }
     };
     (
-        <$heap:ident, $fmt:ident>
-        {$($enum_cases:tt)*}
-        {$($debug_cases:tt)*}
+        enum<$heap:ident> {$($enum_cases:tt)*}
+        Debug($fmt:ident) {$($debug_cases:tt)*}
+        Clone {$($clone_cases:tt)*}
         BrTable { targets: BrTableTargets };
         $($remaining:tt)*
     ) => {
         instr_enum_cases! {
-            <$heap, $fmt>
-            {
+            enum<$heap> {
                 $($enum_cases)*
                 #[allow(missing_docs)]
                 BrTable { targets: <$heap as Heap>::Box<[LabelIdx]>, default_target: LabelIdx },
             }
-            {
+
+            Debug($fmt) {
                 $($debug_cases)*
                 Self::BrTable { targets, default_target } => {
                     let targets: &[LabelIdx] = targets;
@@ -36,71 +42,93 @@ macro_rules! instr_enum_cases {
                         .finish()
                 }
             }
+
+            Clone {
+                $($clone_cases)*
+                Self::BrTable { targets, default_target } => Self::BrTable {
+                    targets: targets.clone(),
+                    default_target: *default_target,
+                },
+            }
+
             $($remaining)*
         }
     };
     (
-        <$heap:ident, $fmt:ident>
-        {$($enum_cases:tt)*}
-        {$($debug_cases:tt)*}
+        enum<$heap:ident> {$($enum_cases:tt)*}
+        Debug($fmt:ident) {$($debug_cases:tt)*}
+        Clone {$($clone_cases:tt)*}
         Select;
         $($remaining:tt)*
     ) => {
         instr_enum_cases! {
-            <$heap, $fmt>
-            {
+            enum<$heap> {
                 $($enum_cases)*
                 #[allow(missing_docs)]
-                Select { types: <$heap as Heap>::Box<[crate::types::ValType]> },
+                Select { types: <$heap as Heap>::Box<[ValType]> },
             }
-            {
+
+            Debug($fmt) {
                 $($debug_cases)*
                 Self::Select { types } => {
                     let mut s = $fmt.debug_tuple("Select");
-                    let types: &[crate::types::ValType] = types;
+                    let types: &[ValType] = types;
                     if !types.is_empty() {
                         s.field(&types);
                     }
                     s.finish()
                 }
             }
+
+            Clone {
+                $($clone_cases)*
+                Self::Select { types } => Self::Select { types: types.clone() },
+            }
+
             $($remaining)*
         }
     };
     (
-        <$heap:ident, $fmt:ident>
-        {$($enum_cases:tt)*}
-        {$($debug_cases:tt)*} SelectTyped { types: SelectTypes };
+        enum<$heap:ident> {$($enum_cases:tt)*}
+        Debug($fmt:ident) {$($debug_cases:tt)*}
+        Clone {$($clone_cases:tt)*}
+        SelectTyped { types: SelectTypes };
         $($remaining:tt)*
     ) => {
         instr_enum_cases! {
-            <$heap, $fmt>
-            {
+            enum<$heap> {
                 $($enum_cases)*
                 // This case is already handled by Select
             }
-            {
+
+            Debug($fmt) {
                 $($debug_cases)*
                 // This case is already handled by Select
             }
+
+            Clone {
+                $($clone_cases)*
+                // This case is already handled by Select
+            }
+
             $($remaining)*
         }
     };
     (
-        <$heap:ident, $fmt:ident>
-        {$($enum_cases:tt)*}
-        {$($debug_cases:tt)*}
+        enum<$heap:ident> {$($enum_cases:tt)*}
+        Debug($fmt:ident) {$($debug_cases:tt)*}
+        Clone {$($clone_cases:tt)*}
         $pascal_ident:ident $({ $field_name:ident: $field_type:ident })?;
         $($remaining:tt)*
     ) => {
         instr_enum_cases! {
-            <$heap, $fmt>
-            {
+            enum<$heap> {
                 $($enum_cases)*
                 #[allow(missing_docs)]
                 $pascal_ident $(($field_type))?,
             }
-            {
+
+            Debug($fmt) {
                 $($debug_cases)*
                 Self::$pascal_ident $(($field_name))? => {
                     let mut t = $fmt.debug_tuple(stringify!($pascal_ident));
@@ -108,23 +136,32 @@ macro_rules! instr_enum_cases {
                     t.finish()
                 }
             }
+
+            Clone {
+                $($clone_cases)*
+                Self::$pascal_ident $(($field_name))? => {
+                    Self::$pascal_ident $(($field_name.clone()))?
+                }
+            }
+
             $($remaining)*
         }
     };
     (
-        <$heap:ident, $fmt:ident>
-        {$($enum_cases:tt)*} {$($debug_cases:tt)*}
+        enum<$heap:ident> {$($enum_cases:tt)*}
+        Debug($fmt:ident) {$($debug_cases:tt)*}
+        Clone {$($clone_cases:tt)*}
         $pascal_ident:ident { $($field_name:ident: $field_type:ident),+ };
         $($remaining:tt)*
     ) => {
         instr_enum_cases! {
-            <$heap, $fmt>
-            {
+            enum<$heap> {
                 $($enum_cases)*
                 #[allow(missing_docs)]
                 $pascal_ident { $($field_name: $field_type),+ },
             }
-            {
+
+            Debug($fmt) {
                 $($debug_cases)*
                 Self::$pascal_ident { $($field_name),+ } => {
                     let mut s = $fmt.debug_struct(stringify!($pascal_ident));
@@ -132,10 +169,30 @@ macro_rules! instr_enum_cases {
                     s.finish()
                 }
             }
+
+            Clone {
+                $($clone_cases)*
+                Self::$pascal_ident { $($field_name),+ } => Self::$pascal_ident {
+                    $($field_name: $field_name.clone()),+
+                },
+            }
+
             $($remaining)*
         }
     };
-    (<$heap:ident, $fmt:ident> {$($enum_cases:tt)*} {$($debug_cases:tt)*}) => {
+    {
+        enum<$heap:ident> {
+            $($enum_cases:tt)*
+        }
+
+        Debug($fmt:ident) {
+            $($debug_cases:tt)*
+        }
+
+        Clone {
+            $($clone_cases:tt)*
+        }
+    } => {
         /// Represents a WebAssembly [instruction].
         ///
         /// [instruction]: https://webassembly.github.io/spec/core/binary/instructions.html
@@ -151,6 +208,20 @@ macro_rules! instr_enum_cases {
                 match self {
                     $($debug_cases)*
                     Self::_MarkerForUnusedGeneric { .. } => Ok(()),
+                }
+            }
+        }
+
+        impl<H> Clone for Instr<H>
+        where
+            H: Heap,
+            <H as Heap>::Box<[ValType]>: Clone,
+            <H as Heap>::Box<[LabelIdx]>: Clone,
+        {
+            fn clone(&self) -> Self {
+                match self {
+                    $($clone_cases)*
+                    Self::_MarkerForUnusedGeneric { .. } => Self::_MarkerForUnusedGeneric(core::marker::PhantomData),
                 }
             }
         }
