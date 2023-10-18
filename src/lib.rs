@@ -13,7 +13,6 @@
 #![deny(clippy::exhaustive_enums)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
-#![recursion_limit = "600"]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;

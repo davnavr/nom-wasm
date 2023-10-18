@@ -4,7 +4,6 @@
 
 mod br_table_targets;
 mod expr;
-mod instr_alloc;
 mod instr_definitions;
 mod instr_kind;
 mod invalid_instr;
@@ -14,10 +13,13 @@ mod opcodes;
 mod parse_instr;
 mod parse_instruction;
 
+#[cfg_attr(doc_cfg, doc(cfg(feature = "allocator-api2")))]
+#[cfg(feature = "allocator-api2")]
+pub mod instructions;
+
 pub use crate::module::LabelIdx;
 pub use br_table_targets::BrTableTargets;
 pub use expr::{expr, InvalidExpr};
-pub use instr_alloc::Instr;
 pub use instr_kind::InstrKind;
 pub use invalid_instr::InvalidInstr;
 pub use invalid_opcode::InvalidOpcode;

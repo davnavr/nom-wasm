@@ -136,7 +136,7 @@ macro_rules! instr_kind_name {
             /// the [WebAssembly text format].
             ///
             /// [WebAssembly text format]: https://webassembly.github.io/spec/core/text/instructions.html
-            pub fn name(&self) -> &'static str {
+            pub const fn name(&self) -> &'static str {
                 match self {
                     $(instr_kind_name_case!($opcode_case $pascal_ident) => $wasm_name,)*
                 }
