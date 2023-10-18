@@ -28,6 +28,7 @@ impl<'a, T, E: ErrorSource<'a>> ResultExt<'a, T, E> for isa::Result<T, E> {
                 E::from_error_kind_and_cause(start, ErrorKind::Verify, cause),
             )),
             Err(isa::ParseInstrError::ParseFailed(err)) => Err(nom::Err::Failure(err)),
+            Err(isa::ParseInstrError::Nom(err)) => Err(err),
         }
     }
 }
