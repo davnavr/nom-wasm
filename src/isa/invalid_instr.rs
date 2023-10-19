@@ -15,7 +15,13 @@ pub enum InvalidInstr {
     Source,
     /// A vector [**`laneidx`**](crate::isa::LaneIdx) could not be parsed.
     VectorLane,
+    /// A `br_table` instruction had too many labels.
+    BrTableLabelCount,
+    /// A typed `select` instruction had too many types.
+    SelectTypedArity(core::num::NonZeroU8),
 }
+
+crate::static_assert::check_size!(InvalidInstr, <= 2);
 
 impl core::fmt::Display for InvalidInstr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -25,6 +31,16 @@ impl core::fmt::Display for InvalidInstr {
             Self::Destination => f.write_str("could not parse destination index"),
             Self::Source => f.write_str("could not parse source index"),
             Self::VectorLane => f.write_str("could not parse vector lane index"),
+            Self::BrTableLabelCount => {
+                f.write_str("`br_table` instruction specified too many labels")
+            }
+            Self::SelectTypedArity(arity) => {
+                f.write_str("`select` instruction should specify at most 1 type")?;
+                if core::num::NonZeroU8::MAX == *arity {
+                    write!(f, ", but {arity} types were encoded")?;
+                }
+                Ok(())
+            }
         }
     }
 }

@@ -10,10 +10,8 @@ use crate::{
 #[derive(Clone, Debug, PartialEq)]
 #[allow(clippy::exhaustive_enums)]
 pub enum ParseInstrError<E> {
-    #[allow(missing_docs)]
-    Nom(nom::Err<E>),
     /// An immediate argument for the parsed instruction could not be parsed.
-    ParseFailed(E),
+    Nom(nom::Err<E>),
     #[allow(missing_docs)]
     Cause(crate::error::ErrorCause),
     /// The [`ParseInstr`] trait does not recognize the instruction that was parsed.
@@ -24,7 +22,6 @@ impl<E: core::fmt::Debug + core::fmt::Display> core::fmt::Display for ParseInstr
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Nom(err) => core::fmt::Display::fmt(err, f),
-            Self::ParseFailed(err) => core::fmt::Display::fmt(err, f),
             Self::Cause(cause) => core::fmt::Display::fmt(cause, f),
             Self::Unrecognized => f.write_str("instruction was not recognized"),
         }

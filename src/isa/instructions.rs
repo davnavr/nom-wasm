@@ -5,6 +5,7 @@
 //! [WebAssembly instructions]: https://webassembly.github.io/spec/core/binary/instructions.html
 
 use crate::{
+    error::ErrorSource,
     isa,
     module::{DataIdx, ElemIdx, FuncIdx, GlobalIdx, LocalIdx, MemIdx, TableIdx, TagIdx, TypeIdx},
     types::{BlockType, RefType, ValType},
@@ -13,6 +14,7 @@ use crate::{
 use allocator_api2::{
     alloc::{Allocator, Global},
     boxed::Box,
+    vec::Vec,
 };
 use core::{
     fmt::{Debug, Formatter},
@@ -216,6 +218,154 @@ macro_rules! instr_case {
     };
 }
 
+/// Error type used in [`ParseExpr`] to indicate that an [`Instr`]uction is not recognized.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct UnrecognizedInstr;
+
+impl core::fmt::Display for UnrecognizedInstr {
+    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
+        f.write_str("instruction was not recognzied")
+    }
+}
+
+/// Trait for parsing [`Instr`]uctions in expressions.
+pub trait ParseExpr<A: Allocator = Global> {
+    #[allow(missing_docs)]
+    fn parse(&mut self, instr: Instr<A>) -> Result<(), UnrecognizedInstr>;
+}
+
+crate::static_assert::object_safe!(ParseExpr);
+
+impl<A: Allocator> ParseExpr<A> for Vec<Instr<A>, A> {
+    #[inline]
+    fn parse(&mut self, instr: Instr<A>) -> Result<(), UnrecognizedInstr> {
+        self.push(instr);
+        Ok(())
+    }
+}
+
+/// Provides a [`ParseInstr`](isa::ParseInstr) implementation for a [`ParseExpr`] implementation.
+pub struct Parser<'a, E, P, A = Global>
+where
+    E: ErrorSource<'a>,
+    P: ParseExpr<A>,
+    A: Clone + Allocator,
+{
+    allocator: A,
+    parser: P,
+    _marker: PhantomData<fn(&'a [u8]) -> E>,
+}
+
+#[allow(missing_docs)]
+impl<'a, E, P, A> Parser<'a, E, P, A>
+where
+    E: ErrorSource<'a>,
+    P: ParseExpr<A>,
+    A: Clone + Allocator,
+{
+    pub fn with_allocator(parser: P, allocator: A) -> Self {
+        Self {
+            allocator,
+            parser,
+            _marker: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub fn allocator(&self) -> &A {
+        &self.allocator
+    }
+
+    #[inline]
+    pub fn into_parser(self) -> P {
+        self.parser
+    }
+}
+
+impl<'a, E, P, A> Debug for Parser<'a, E, P, A>
+where
+    E: ErrorSource<'a>,
+    P: ParseExpr<A>,
+    A: Clone + Allocator,
+{
+    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
+        f.debug_struct("Parser").finish_non_exhaustive()
+    }
+}
+
+macro_rules! parse_method_impl {
+    (br_table<$_lifetime:lifetime, $error:ident>(targets: BrTableTargets) => BrTable) => {
+        fn br_table(&mut self, targets: &mut isa::BrTableTargets<'a, E>) -> isa::Result<(), $error> {
+            let mut other_targets = Vec::with_capacity_in(targets.len() - 1, self.allocator.clone());
+            let mut default_target = LabelIdx(0);
+            while let Some(result) = targets.next() {
+                let label = result?;
+                if targets.len() == 0 {
+                    default_target = label;
+                } else {
+                    other_targets.push(label);
+                }
+            }
+
+            let instr = Instr::BrTable(BrTable {
+                targets: other_targets.into_boxed_slice(),
+                default_target,
+            });
+
+            self.parser
+                .parse(instr)
+                .map_err(|UnrecognizedInstr| isa::ParseInstrError::Unrecognized)
+        }
+    };
+    (select_typed<$_lifetime:lifetime, $error:ident>(types: SelectTypes) => SelectTyped) => {
+        fn select_typed(&mut self, types: &mut isa::SelectTypes<'a, E>) -> isa::Result<(), $error> {
+            let start = crate::input::AsInput::as_input(types);
+            let result = types.next().expect("SelectTypes always returns at least 1 type");
+            let operand_type = result?;
+
+            if types.len() > 0 {
+                let arity = u8::try_from(types.len())
+                    .ok()
+                    .and_then(|a| a.checked_add(1))
+                    .and_then(core::num::NonZeroU8::new)
+                    .unwrap_or(core::num::NonZeroU8::MAX);
+
+                let e = E::from_error_kind_and_cause(
+                    start,
+                    crate::error::ErrorKind::Verify,
+                    crate::error::ErrorCause::Instr {
+                        opcode: InstrKind::Byte(isa::Opcode::SelectTyped),
+                        reason: isa::InvalidInstr::SelectTypedArity(arity)
+                    },
+                );
+
+                return Err(isa::ParseInstrError::Nom(nom::Err::Failure(e)));
+            }
+
+            let instr = Instr::SelectTyped(SelectTyped {
+                operand_type,
+                _marker: PhantomData,
+            });
+
+            self.parser
+                .parse(instr)
+                .map_err(|UnrecognizedInstr| isa::ParseInstrError::Unrecognized)
+        }
+    };
+    ($snake_ident:ident<$_lifetime:lifetime, $error:ident>($($($field_name:ident: $field_type:ident),+)?) => $pascal_ident:ident) => {
+        fn $snake_ident(&mut self $(, $($field_name: $field_type),+)?) -> isa::Result<(), $error> {
+            let instr = Instr::$pascal_ident($pascal_ident {
+                _marker: PhantomData
+                $(, $($field_name),+)?
+            });
+
+            self.parser
+                .parse(instr)
+                .map_err(|UnrecognizedInstr| isa::ParseInstrError::Unrecognized)
+        }
+    };
+}
+
 macro_rules! instr_enum {
     ($(
         $opcode_case:ident $wasm_name:literal $pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;
@@ -281,6 +431,15 @@ macro_rules! instr_enum {
                     $(Self::$pascal_ident(ident) => Debug::fmt(ident, f),)*
                 }
             }
+        }
+
+        impl<'a, E, P, A> isa::ParseInstr<'a, E> for Parser<'a, E, P, A>
+        where
+            E: ErrorSource<'a>,
+            P: ParseExpr<A>,
+            A: Clone + Allocator,
+        {
+            $(parse_method_impl!($snake_ident<'a, E> ($($($field_name: $field_type),+)?) => $pascal_ident);)*
         }
     };
 }

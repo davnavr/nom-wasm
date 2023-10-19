@@ -19,10 +19,13 @@ impl<'a, E: ErrorSource<'a>> BrTableTargets<'a, E> {
                 targets: IndexVectorParser::new(count, remaining, Default::default()),
             })
         } else {
-            Err(nom::Err::Failure(E::from_error_kind(
+            Err(nom::Err::Failure(E::from_error_kind_and_cause(
                 input,
                 nom::error::ErrorKind::Verify,
-                //SelectTypedBadArity
+                crate::error::ErrorCause::Instr {
+                    opcode: crate::isa::InstrKind::Byte(crate::isa::Opcode::BrTable),
+                    reason: crate::isa::InvalidInstr::BrTableLabelCount,
+                },
             )))
         }
     }
