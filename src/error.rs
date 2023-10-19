@@ -7,7 +7,10 @@ mod cause;
 mod verbose_error;
 
 #[doc(no_inline)]
-pub use crate::isa::{InvalidExpr, InvalidInstr, InvalidOpcode};
+pub use crate::{
+    isa::{InvalidExpr, InvalidInstr, InvalidOpcode},
+    values::InvalidVector,
+};
 pub use cause::{
     ErrorCause, ImportComponent, InvalidFlags, InvalidFlagsValue, InvalidTag, LengthMismatch,
     LimitsComponent, MemArgComponent,
@@ -97,9 +100,11 @@ impl<'a> ErrorSource<'a> for (&'a [u8], ErrorKind) {}
 impl<'a> ErrorSource<'a> for nom::error::Error<&'a [u8]> {}
 
 impl<'a> ErrorSource<'a> for Error<'a> {
-    #[inline]
     fn with_cause(mut self, cause: ErrorCause) -> Self {
-        self.cause = Some(cause);
+        if self.cause.is_none() {
+            self.cause = Some(cause);
+        }
+
         self
     }
 

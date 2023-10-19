@@ -179,8 +179,7 @@ pub enum ErrorCause {
     },
     InvalidTag(InvalidTag),
     InvalidFlags(InvalidFlags),
-    #[non_exhaustive]
-    VectorLength,
+    Vector(crate::values::InvalidVector),
     #[non_exhaustive]
     NameLength,
     NameContents(LengthMismatch),
@@ -273,7 +272,7 @@ impl Display for ErrorCause {
             }
             Self::InvalidTag(tag) => Display::fmt(tag, f),
             Self::InvalidFlags(flags) => Display::fmt(flags, f),
-            Self::VectorLength => f.write_str("expected item count prefix for vector"),
+            Self::Vector(bad) => Display::fmt(bad, f),
             Self::NameLength => f.write_str("expected name length"),
             Self::NameContents(e) => e.print("UTF-8 encoded name", f),
             Self::NameEncoding(e) => write!(f, "invalid name encoding: {e}"),

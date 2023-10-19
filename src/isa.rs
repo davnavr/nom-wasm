@@ -37,4 +37,4 @@ pub type LaneIdx = u8;
 ///
 /// [typed `select`]: ParseInstr::select_typed
 pub type SelectTypes<'a, E> =
-    crate::values::VectorIter<'a, crate::types::ValType, E, crate::types::ValTypeParser>;
+    crate::values::BoundedVectorIter<'a, 1, crate::types::ValType, E, crate::types::ValTypeParser>;

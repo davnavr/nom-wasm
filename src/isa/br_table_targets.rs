@@ -6,7 +6,7 @@ use crate::{error::ErrorSource, index::IndexVectorParser, input::Result, isa::La
 /// [`br_table`]: crate::isa::ParseInstr::br_table
 #[derive(Clone)]
 #[must_use]
-pub struct BrTableTargets<'a, E: ErrorSource<'a>> {
+pub struct BrTableTargets<'a, E: ErrorSource<'a> = crate::error::Error<'a>> {
     targets: IndexVectorParser<'a, LabelIdx, E>,
 }
 
@@ -22,6 +22,7 @@ impl<'a, E: ErrorSource<'a>> BrTableTargets<'a, E> {
             Err(nom::Err::Failure(E::from_error_kind(
                 input,
                 nom::error::ErrorKind::Verify,
+                //SelectTypedBadArity
             )))
         }
     }
