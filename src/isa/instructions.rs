@@ -280,6 +280,64 @@ where
     pub fn into_parser(self) -> P {
         self.parser
     }
+
+    fn br_table_impl(&mut self, targets: &mut isa::BrTableTargets<'a, E>) -> isa::Result<(), E> {
+        let mut other_targets = Vec::with_capacity_in(targets.len() - 1, self.allocator.clone());
+        let mut default_target = LabelIdx(0);
+        while let Some(result) = targets.next() {
+            let label = result?;
+            if targets.len() == 0 {
+                default_target = label;
+            } else {
+                other_targets.push(label);
+            }
+        }
+
+        let instr = Instr::BrTable(BrTable {
+            targets: other_targets.into_boxed_slice(),
+            default_target,
+        });
+
+        self.parser
+            .parse(instr)
+            .map_err(|UnrecognizedInstr| isa::ParseInstrError::Unrecognized)
+    }
+
+    fn select_typed_impl(&mut self, types: &mut isa::SelectTypes<'a, E>) -> isa::Result<(), E> {
+        let start = crate::input::AsInput::as_input(types);
+        let result = types
+            .next()
+            .expect("SelectTypes always returns at least 1 type");
+        let operand_type = result?;
+
+        if types.len() > 0 {
+            let arity = u8::try_from(types.len())
+                .ok()
+                .and_then(|a| a.checked_add(1))
+                .and_then(core::num::NonZeroU8::new)
+                .unwrap_or(core::num::NonZeroU8::MAX);
+
+            let e = E::from_error_kind_and_cause(
+                start,
+                crate::error::ErrorKind::Verify,
+                crate::error::ErrorCause::Instr {
+                    opcode: InstrKind::Byte(isa::Opcode::SelectTyped),
+                    reason: isa::InvalidInstr::SelectTypedArity(arity),
+                },
+            );
+
+            return Err(isa::ParseInstrError::Nom(nom::Err::Failure(e)));
+        }
+
+        let instr = Instr::SelectTyped(SelectTyped {
+            operand_type,
+            _marker: PhantomData,
+        });
+
+        self.parser
+            .parse(instr)
+            .map_err(|UnrecognizedInstr| isa::ParseInstrError::Unrecognized)
+    }
 }
 
 impl<'a, E, P, A> Debug for Parser<'a, E, P, A>
@@ -295,61 +353,15 @@ where
 
 macro_rules! parse_method_impl {
     (br_table<$_lifetime:lifetime, $error:ident>(targets: BrTableTargets) => BrTable) => {
+        #[inline]
         fn br_table(&mut self, targets: &mut isa::BrTableTargets<'a, E>) -> isa::Result<(), $error> {
-            let mut other_targets = Vec::with_capacity_in(targets.len() - 1, self.allocator.clone());
-            let mut default_target = LabelIdx(0);
-            while let Some(result) = targets.next() {
-                let label = result?;
-                if targets.len() == 0 {
-                    default_target = label;
-                } else {
-                    other_targets.push(label);
-                }
-            }
-
-            let instr = Instr::BrTable(BrTable {
-                targets: other_targets.into_boxed_slice(),
-                default_target,
-            });
-
-            self.parser
-                .parse(instr)
-                .map_err(|UnrecognizedInstr| isa::ParseInstrError::Unrecognized)
+            self.br_table_impl(targets)
         }
     };
     (select_typed<$_lifetime:lifetime, $error:ident>(types: SelectTypes) => SelectTyped) => {
+        #[inline]
         fn select_typed(&mut self, types: &mut isa::SelectTypes<'a, E>) -> isa::Result<(), $error> {
-            let start = crate::input::AsInput::as_input(types);
-            let result = types.next().expect("SelectTypes always returns at least 1 type");
-            let operand_type = result?;
-
-            if types.len() > 0 {
-                let arity = u8::try_from(types.len())
-                    .ok()
-                    .and_then(|a| a.checked_add(1))
-                    .and_then(core::num::NonZeroU8::new)
-                    .unwrap_or(core::num::NonZeroU8::MAX);
-
-                let e = E::from_error_kind_and_cause(
-                    start,
-                    crate::error::ErrorKind::Verify,
-                    crate::error::ErrorCause::Instr {
-                        opcode: InstrKind::Byte(isa::Opcode::SelectTyped),
-                        reason: isa::InvalidInstr::SelectTypedArity(arity)
-                    },
-                );
-
-                return Err(isa::ParseInstrError::Nom(nom::Err::Failure(e)));
-            }
-
-            let instr = Instr::SelectTyped(SelectTyped {
-                operand_type,
-                _marker: PhantomData,
-            });
-
-            self.parser
-                .parse(instr)
-                .map_err(|UnrecognizedInstr| isa::ParseInstrError::Unrecognized)
+            self.select_typed_impl(types)
         }
     };
     ($snake_ident:ident<$_lifetime:lifetime, $error:ident>($($($field_name:ident: $field_type:ident),+)?) => $pascal_ident:ident) => {
