@@ -225,6 +225,13 @@ pub trait ParseExpr<A: Allocator = Global> {
 
 crate::static_assert::object_safe!(ParseExpr);
 
+impl<A: Allocator, P: ParseExpr<A>> ParseExpr<A> for &mut P {
+    #[inline]
+    fn parse(&mut self, instr: Instr<A>) -> Result<(), UnrecognizedInstr> {
+        P::parse(self, instr)
+    }
+}
+
 impl<A: Allocator> ParseExpr<A> for Vec<Instr<A>, A> {
     #[inline]
     fn parse(&mut self, instr: Instr<A>) -> Result<(), UnrecognizedInstr> {
@@ -243,6 +250,18 @@ where
     allocator: A,
     parser: P,
     _marker: PhantomData<fn(&'a [u8]) -> E>,
+}
+
+impl<'a, E, P> Parser<'a, E, P>
+where
+    E: ErrorSource<'a>,
+    P: ParseExpr,
+{
+    #[allow(missing_docs)]
+    #[inline]
+    pub fn new(parser: P) -> Self {
+        Self::with_allocator(parser, Global)
+    }
 }
 
 #[allow(missing_docs)]
