@@ -64,7 +64,7 @@ pub(in crate::isa) use instr_method_declaration;
 
 macro_rules! parse_instr_method {
     ($(
-        $opcode_case:ident $wasm_name:literal $pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;
+        $_opcode_enum:ident $_wasm_name:literal $_pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;
     )*) => {
         $(
             instr_method_declaration!(instr_method_define_default($snake_ident $({ $($field_name: $field_type),+ })?));

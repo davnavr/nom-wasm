@@ -1,5 +1,8 @@
 //! Contains types representing [WebAssembly instructions].
 //!
+//! The [`Instr`] enumeration represents an instruction, while the [`Parser`] struct and
+//! [`ParseExpr`] trait are used for parsing [`Instr`]uctions.
+//!
 //! This module is dependent on the `allocator-api2` feature.
 //!
 //! [WebAssembly instructions]: https://webassembly.github.io/spec/core/binary/instructions.html
@@ -25,11 +28,12 @@ use core::{
 pub use isa::{LabelIdx, LaneIdx, MemArg, Opcode};
 
 macro_rules! instr_case_common {
-    ($opcode_case:ident $wasm_name:literal $pascal_ident:ident) => {
+    ($opcode_enum:ident $wasm_name:literal $pascal_ident:ident) => {
         #[allow(missing_docs)]
         impl<A: Allocator> $pascal_ident<A> {
             pub const NAME: &'static str = $wasm_name;
             pub const OPCODE: Opcode = Opcode::$pascal_ident;
+            pub const OPCODE_CATEGORY: isa::$opcode_enum = isa::$opcode_enum::$pascal_ident;
         }
     };
 }
@@ -84,7 +88,7 @@ macro_rules! instr_case_common_partial_eq {
 }
 
 macro_rules! instr_case {
-    (Byte $wasm_name:literal BrTable { targets: BrTableTargets }) => {
+    (ByteOpcode $wasm_name:literal BrTable { targets: BrTableTargets }) => {
         #[derive(Clone)]
         #[allow(missing_docs)]
         #[non_exhaustive]
@@ -93,7 +97,7 @@ macro_rules! instr_case {
             pub default_target: LabelIdx,
         }
 
-        instr_case_common!(Byte $wasm_name BrTable);
+        instr_case_common!(ByteOpcode $wasm_name BrTable);
 
         impl<A1: Allocator, A2: Allocator> PartialEq<BrTable<A2>> for BrTable<A1> {
             #[inline]
@@ -122,7 +126,7 @@ macro_rules! instr_case {
             }
         }
     };
-    (Byte $wasm_name:literal SelectTyped { types: SelectTypes }) => {
+    (ByteOpcode $wasm_name:literal SelectTyped { types: SelectTypes }) => {
         #[derive(Clone)]
         #[allow(missing_docs)]
         #[non_exhaustive]
@@ -131,7 +135,7 @@ macro_rules! instr_case {
             _marker: PhantomData<fn() -> A>
         }
 
-        instr_case_common!(Byte $wasm_name SelectTyped);
+        instr_case_common!(ByteOpcode $wasm_name SelectTyped);
 
         impl<A: Allocator> SelectTyped<A> {
             /// Returns the [`ValType`] of the operand to the [`select` instruction].
@@ -171,7 +175,7 @@ macro_rules! instr_case {
         }
     };
     {
-        $opcode_case:ident $wasm_name:literal $pascal_ident:ident $({
+        $opcode_enum:ident $wasm_name:literal $pascal_ident:ident $({
             $($field_name:ident: $field_type:ident),+
         })?
     } => {
@@ -185,7 +189,7 @@ macro_rules! instr_case {
             _marker: PhantomData<fn() -> A>
         }
 
-        instr_case_common!($opcode_case $wasm_name $pascal_ident);
+        instr_case_common!($opcode_enum $wasm_name $pascal_ident);
 
         instr_case_common_partial_eq!($pascal_ident $({$($field_name: $field_type),+})?);
 
