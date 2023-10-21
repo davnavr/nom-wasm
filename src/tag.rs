@@ -9,7 +9,7 @@ macro_rules! enumeration_basic {
         }
     ) => {
         $(#[$enum_meta])*
-        #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+        #[derive(Clone, Copy, Eq, Hash, PartialEq)]
         pub enum $enum_name {$(
             $(#[$case_meta])*
             $case_name = $case_value,
@@ -27,13 +27,6 @@ macro_rules! enumeration_basic {
                     _ => None,
                 }
             }
-
-            #[doc = "Contains all `"]
-            #[doc = stringify!($enum_name)]
-            #[doc = "` variants."]
-            pub const ALL: &[Self] = &[
-                $(Self::$case_name,)*
-            ];
         }
 
         impl From<$enum_name> for $integer {
@@ -43,12 +36,32 @@ macro_rules! enumeration_basic {
             }
         }
 
-        //impl core::fmt::Debug for $enum_name {
-        //    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        //        const DEBUG_NAMES: &[&str; $enum_name::ALL.len()] = &[$(stringify!($case_name)),*];
-        //        f.debug_tuple(DEBUG_NAMES[*self as usize]).finish()
-        //    }
-        //}
+        impl core::fmt::Debug for $enum_name {
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                #[derive(Clone, Copy)]
+                #[repr(usize)]
+                enum Key {
+                    $($case_name,)*
+                }
+
+                const DEBUG_NAMES: &[*const u8] = &[$(stringify!($case_name).as_ptr()),*];
+                const DEBUG_NAME_LENS: &[u8] = &[$(stringify!($case_name).len() as u8),*];
+
+                let key = match self {
+                    $(Self::$case_name => Key::$case_name,)*
+                };
+
+                // Safety: key is always in bounds, pointer is to valid UTF-8
+                let name: &'static str = unsafe {
+                    let ptr: *const u8 = *DEBUG_NAMES.get_unchecked(key as usize);
+                    let len: u8 = *DEBUG_NAME_LENS.get_unchecked(key as usize);
+                    let bytes: &'static [u8] = core::slice::from_raw_parts(ptr, len as usize);
+                    core::str::from_utf8_unchecked(bytes)
+                };
+
+                f.debug_tuple(name).finish()
+            }
+        }
     };
 }
 

@@ -56,7 +56,7 @@ macro_rules! byte_opcodes {
         crate::tag::enumeration_basic! {
             /// List of all WebAssembly [*opcodes*] that encode an instruction in a single byte.
             ///
-            /// See the [`Opcode`] `enum` for the set of all possible WebAssembly instruction
+            /// See the [`Opcode`] enumeration for the set of all possible WebAssembly instruction
             /// [*opcodes*], including those with prefix bytes.
             ///
             /// [*opcodes*]: https://webassembly.github.io/spec/core/binary/instructions.html#instructions
