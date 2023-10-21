@@ -23,7 +23,7 @@ impl<'a, E: ErrorSource<'a>> BrTableTargets<'a, E> {
                 input,
                 nom::error::ErrorKind::Verify,
                 crate::error::ErrorCause::Instr {
-                    opcode: crate::isa::InstrKind::Byte(crate::isa::Opcode::BrTable),
+                    opcode: crate::isa::Opcode::BrTable,
                     reason: crate::isa::InvalidInstr::BrTableLabelCount,
                 },
             )))

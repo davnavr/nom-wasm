@@ -9,14 +9,21 @@ macro_rules! check {
 }
 
 macro_rules! check_size {
+    ($ty:ty, <= $expr:literal) => {
+        crate::static_assert::check!(
+            core::mem::size_of::<$ty>() <= $expr,
+            concat!("size_of<", stringify!($ty), "> cannot exceed ", $expr,)
+        );
+    };
     ($ty:ty, <= $expr:expr) => {
         crate::static_assert::check!(
             core::mem::size_of::<$ty>() <= $expr,
-            core::concat!(
+            concat!(
                 "size_of<",
-                core::stringify!($ty),
-                "> must not exceed ",
-                $expr
+                stringify!($ty),
+                "> cannot exceed `",
+                stringify!($expr),
+                "`"
             )
         );
     };

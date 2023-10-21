@@ -1,10 +1,16 @@
+//! Contains all instructions recognized by [`nom-wasm`](crate).
+//!
+//! To add a new instruction:
+//! - Add a new entry to `called_macro!`
+//! - Add a new case in `opcode_enums.rs`
+
 /// Applies a macro to each of the instructions recognized by [`nom-wasm`](crate), where the
 /// `$called_macro` is in the form:
 ///
 /// ```no_run
 /// macro_rules! called_macro {
 ///     ($(
-///         $opcode_case:ident $wasm_name:literal $pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;
+///         $opcode_enum:ident $wasm_name:literal $pascal_ident:ident $({ $($field_name:ident: $field_type:ident),+ })? $snake_ident:ident;
 ///     )*) => {
 ///         // Add your macro content here
 ///     };
@@ -12,9 +18,11 @@
 /// ```
 ///
 /// Where:
-/// - `$opcode_case` is the name of the `InstrKind` case corresponding to the instruction's opcode.
+/// - `$opcode_enum` is the name of the enum that the instruction's opcode belongs to.
 /// - `$wasm_name` is a string literal corresponding to the name of instruction in the WebAssembly
 ///   Text Format.
+/// - `pascal_ident` is the PascalCase identifier used to refer to the instruction in
+///   the `Opcode` enum, its specific enum, and `Instr`.
 macro_rules! all {
     ($called_macro:ident) => {
         $called_macro! {

@@ -231,7 +231,7 @@ pub enum ErrorCause {
     Opcode(crate::isa::InvalidOpcode),
     #[non_exhaustive]
     Instr {
-        opcode: crate::isa::InstrKind,
+        opcode: crate::isa::Opcode,
         reason: crate::isa::InvalidInstr,
     },
     Expr(crate::isa::InvalidExpr),

@@ -22,29 +22,14 @@ use core::{
     marker::PhantomData,
 };
 
-pub use isa::{InstrKind, LabelIdx, LaneIdx, MemArg};
-
-macro_rules! instr_kind_case {
-    (Byte => $name:ident) => {
-        InstrKind::Byte(isa::Opcode::$name)
-    };
-    (FCPrefixed => $name:ident) => {
-        InstrKind::FCPrefixed(isa::FCPrefixedOpcode::$name)
-    };
-    (V128 => $name:ident) => {
-        InstrKind::V128(isa::V128Opcode::$name)
-    };
-    (FEPrefixed => $name:ident) => {
-        InstrKind::FEPrefixed(isa::FEPrefixedOpcode::$name)
-    };
-}
+pub use isa::{LabelIdx, LaneIdx, MemArg, Opcode};
 
 macro_rules! instr_case_common {
     ($opcode_case:ident $wasm_name:literal $pascal_ident:ident) => {
         #[allow(missing_docs)]
         impl<A: Allocator> $pascal_ident<A> {
             pub const NAME: &'static str = $wasm_name;
-            pub const OPCODE: InstrKind = instr_kind_case!($opcode_case => $pascal_ident);
+            pub const OPCODE: Opcode = Opcode::$pascal_ident;
         }
     };
 }
@@ -321,7 +306,7 @@ where
                 start,
                 crate::error::ErrorKind::Verify,
                 crate::error::ErrorCause::Instr {
-                    opcode: InstrKind::Byte(isa::Opcode::SelectTyped),
+                    opcode: Opcode::SelectTyped,
                     reason: isa::InvalidInstr::SelectTypedArity(arity),
                 },
             );
@@ -410,9 +395,9 @@ macro_rules! instr_enum {
                 }
             }
 
-            pub fn opcode(&self) -> InstrKind {
+            pub fn opcode(&self) -> Opcode {
                 match self {
-                    $(Self::$pascal_ident(_) => instr_kind_case!($opcode_case => $pascal_ident),)*
+                    $(Self::$pascal_ident(_) => Opcode::$pascal_ident,)*
                 }
             }
         }

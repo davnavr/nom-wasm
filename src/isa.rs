@@ -5,11 +5,11 @@
 mod br_table_targets;
 mod expr;
 mod instr_definitions;
-mod instr_kind;
 mod invalid_instr;
 mod invalid_opcode;
 mod mem_arg;
-mod opcodes;
+mod opcode;
+mod opcode_enums;
 mod parse_instr;
 mod parse_instruction;
 
@@ -20,11 +20,11 @@ pub mod instructions;
 pub use crate::module::LabelIdx;
 pub use br_table_targets::BrTableTargets;
 pub use expr::{expr, InvalidExpr};
-pub use instr_kind::InstrKind;
 pub use invalid_instr::InvalidInstr;
 pub use invalid_opcode::InvalidOpcode;
 pub use mem_arg::{Align, MemArg};
-pub use opcodes::{FCPrefixedOpcode, FEPrefixedOpcode, Opcode, V128Opcode};
+pub use opcode::Opcode;
+pub use opcode_enums::{ByteOpcode, FCPrefixedOpcode, FEPrefixedOpcode, V128Opcode};
 pub use parse_instr::{ParseInstr, ParseInstrError, Result};
 pub use parse_instruction::instr;
 

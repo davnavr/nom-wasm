@@ -9,11 +9,14 @@ macro_rules! enumeration_basic {
         }
     ) => {
         $(#[$enum_meta])*
-        #[derive(Clone, Copy, Eq, Hash, PartialEq)]
+        #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
         pub enum $enum_name {$(
             $(#[$case_meta])*
             $case_name = $case_value,
         )*}
+
+        // Needed for perfect hashing, TODO: Debug lookup table
+        crate::static_assert::check_size!($enum_name, <= core::mem::size_of::<usize>());
 
         impl $enum_name {
             /// Converts from an integer value, returning `None` if the conversion failed.
@@ -40,15 +43,12 @@ macro_rules! enumeration_basic {
             }
         }
 
-        impl core::fmt::Debug for $enum_name {
-            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                const DEBUG_NAMES: &[&str] = &[
-                    $(stringify!($case_name),)*
-                ];
-
-                f.debug_tuple(DEBUG_NAMES[*self as usize]).finish()
-            }
-        }
+        //impl core::fmt::Debug for $enum_name {
+        //    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        //        const DEBUG_NAMES: &[&str; $enum_name::ALL.len()] = &[$(stringify!($case_name)),*];
+        //        f.debug_tuple(DEBUG_NAMES[*self as usize]).finish()
+        //    }
+        //}
     };
 }
 
