@@ -186,34 +186,14 @@ where
         Opcode::MemorySize => single_argument!(MemIdx => memory_size),
         Opcode::MemoryGrow => single_argument!(MemIdx => memory_grow),
         Opcode::I32Const => {
-            if let Some(constant) = input.get(..4) {
-                parser
-                    .i32_const(i32::from_le_bytes(constant.try_into().unwrap()))
-                    .to_parsed(start, opcode)?;
-
-                &input[4..]
-            } else {
-                return Err(nom::Err::Failure(E::from_error_kind_and_cause(
-                    input,
-                    ErrorKind::Eof,
-                    bad_argument(),
-                )));
-            }
+            let (input, n) = crate::values::leb128_s32(input).add_cause_with(bad_argument)?;
+            parser.i32_const(n).to_parsed(start, opcode)?;
+            input
         }
         Opcode::I64Const => {
-            if let Some(constant) = input.get(..8) {
-                parser
-                    .i64_const(i64::from_le_bytes(constant.try_into().unwrap()))
-                    .to_parsed(start, opcode)?;
-
-                &input[8..]
-            } else {
-                return Err(nom::Err::Failure(E::from_error_kind_and_cause(
-                    input,
-                    ErrorKind::Eof,
-                    bad_argument(),
-                )));
-            }
+            let (input, n) = crate::values::leb128_s64(input).add_cause_with(bad_argument)?;
+            parser.i64_const(n).to_parsed(start, opcode)?;
+            input
         }
         Opcode::F32Const => single_argument!(crate::values::F32 => f32_const),
         Opcode::F64Const => single_argument!(crate::values::F64 => f64_const),

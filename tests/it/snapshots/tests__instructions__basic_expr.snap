@@ -1,0 +1,11 @@
+---
+source: tests/it/instructions.rs
+expression: "&text"
+---
+local.get 0
+i32.const 0x0000002A (* signed = 42, unsigned = 42 *)
+i32.add
+return
+nop
+end
+
