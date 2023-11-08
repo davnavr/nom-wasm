@@ -20,6 +20,7 @@ extern crate alloc;
 pub use nom;
 
 mod hex;
+mod parser;
 mod static_assert;
 mod tag;
 
