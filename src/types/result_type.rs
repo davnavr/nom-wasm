@@ -35,7 +35,7 @@ where
     E: ErrorSource<'a>,
 {
     let (input, count) = values::vector_length(input)?;
-    parser.with_count(count);
+    parser.with_count(nom::ToUsize::to_usize(&count));
     values::sequence(input, count, |input| {
         let (input, value_type) = ValType::parse(input)?;
         parser.next_type(value_type);

@@ -1,0 +1,16 @@
+---
+source: tests/it/module_sections.rs
+expression: result
+---
+Ok(
+    [
+        FuncType {
+            parameters: [
+                I32,
+            ],
+            results: [
+                I64,
+            ],
+        },
+    ],
+)

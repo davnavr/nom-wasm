@@ -14,7 +14,7 @@ mod type_sec;
 
 pub use binary::Module;
 pub use core_indices::{
-    DataIdx, ElemIdx, FuncIdx, GlobalIdx, LabelIdx, MemIdx, TableIdx, TagIdx, TypeIdx,
+    DataIdx, ElemIdx, FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemIdx, TableIdx, TagIdx, TypeIdx,
 };
 pub use import_sec::{Import, ImportDesc, ImportSec};
 pub use module_section::{ModuleSection, ModuleSectionId};

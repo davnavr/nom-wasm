@@ -1,4 +1,4 @@
-use crate::error::{self, AddCause as _};
+use crate::error;
 use nom::ToUsize;
 
 mod import;
@@ -26,9 +26,7 @@ impl<'a> ImportSec<'a> {
     where
         E: error::ErrorSource<'a>,
     {
-        let (imports, count) =
-            crate::values::leb128_u32(contents).add_cause(error::ErrorCause::VectorLength)?;
-
+        let (imports, count) = crate::values::vector_length(contents)?;
         Ok(Self { count, imports })
     }
 
@@ -49,6 +47,8 @@ impl<'a> ImportSec<'a> {
             f(import);
             Ok((input, ()))
         })
+
+        // TODO: Check for EOF
     }
 
     //pub fn iter_contents(&self) -> IterImportSec // or crate::values::IterVector<'a, E, ImportParser>

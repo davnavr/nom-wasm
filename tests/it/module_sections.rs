@@ -1,25 +1,21 @@
 use nom_wasm::error::VerboseError;
 
-/*
 #[test]
 fn type_sec_example() {
-    let bytes = Bytes::from(&[
+    let bytes = [
         1u8,  // count
         0x60, // func
         1,    // parameter count
         0x7F, // i32
         1,    // result count
         0x7E, // i64
-    ]);
+    ];
 
-    let mut errors = InlineErrorReporter::<8>::new();
-    let result = parser::Vector::with_parsed_count(&mut errors, bytes)
-        .map(module::TypeSec::from)
-        .map_err(|_| errors.expect_report());
+    let result = nom_wasm::module::TypeSec::parse::<VerboseError>(&bytes)
+        .and_then(|types| types.parse_all_contents(&mut Default::default()));
 
     insta::assert_debug_snapshot!(result)
 }
-*/
 
 #[test]
 fn import_sec_example() {

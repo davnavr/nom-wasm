@@ -84,7 +84,7 @@ pub enum InvalidFlags {
     GlobalType(InvalidFlagsValue<u8>),
 }
 
-impl core::fmt::Display for InvalidFlags {
+impl Display for InvalidFlags {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let (name, invalid) = match self {
             Self::Limits(e) => ("limits", e),
@@ -106,7 +106,7 @@ impl core::fmt::Display for InvalidFlags {
 impl std::error::Error for InvalidFlags {}
 
 /// Indicates which part of a [`Limits`](crate::types::Limits) could not be parsed.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 #[allow(missing_docs)]
 pub enum LimitsComponent {
@@ -114,7 +114,7 @@ pub enum LimitsComponent {
     Maximum,
 }
 
-impl core::fmt::Display for LimitsComponent {
+impl Display for LimitsComponent {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_str(match self {
             Self::Minimum => "minimum",
@@ -124,7 +124,7 @@ impl core::fmt::Display for LimitsComponent {
 }
 
 /// Indicates which field of an [`Import`](crate::module::Import) could not be parsed.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 #[allow(missing_docs)]
 pub enum ImportComponent {
@@ -132,12 +132,39 @@ pub enum ImportComponent {
     Name,
 }
 
-impl core::fmt::Display for ImportComponent {
+impl Display for ImportComponent {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_str(match self {
             Self::Module => "module name",
             Self::Name => "import name",
         })
+    }
+}
+
+/// Indicates why a [`MemArg`](crate::isa::MemArg) could not be parsed.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[non_exhaustive]
+#[allow(missing_docs)]
+pub enum MemArgComponent {
+    /// Indicates that the [**`align`**] field could not be parsed when [`None`]; otherwise,
+    /// indicates that the [**`align`**] was too large.
+    ///
+    /// [**`align`**]: crate::isa::MemArg::align
+    Alignment(Option<u32>),
+    Offset,
+    Memory,
+}
+
+impl Display for MemArgComponent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Alignment(Some(a)) => {
+                write!(f, "specified alignment was 2^{a}, which is too large")
+            }
+            Self::Alignment(None) => f.write_str("alignment field"),
+            Self::Offset => f.write_str("offset field"),
+            Self::Memory => f.write_str("memory field"),
+        }
     }
 }
 
@@ -152,12 +179,12 @@ pub enum ErrorCause {
     },
     InvalidTag(InvalidTag),
     InvalidFlags(InvalidFlags),
-    #[non_exhaustive]
-    VectorLength,
+    Vector(crate::values::InvalidVector),
     #[non_exhaustive]
     NameLength,
     NameContents(LengthMismatch),
     NameEncoding(core::str::Utf8Error),
+    Index(&'static &'static str),
     #[non_exhaustive]
     SectionId,
     #[non_exhaustive]
@@ -201,11 +228,17 @@ pub enum ErrorCause {
     },
     Import(ImportComponent),
     ModuleSectionOrder(crate::ordering::OrderingError<crate::module::ModuleSectionOrder>),
+    Opcode(crate::isa::InvalidOpcode),
+    #[non_exhaustive]
+    Instr {
+        opcode: crate::isa::Opcode,
+        reason: crate::isa::InvalidInstr,
+    },
+    Expr(crate::isa::InvalidExpr),
+    MemArg(MemArgComponent),
 }
 
-const _SIZE_CHECK: () = if core::mem::size_of::<ErrorCause>() > 16 {
-    panic!("ErrorCause is too large")
-};
+crate::static_assert::check_size!(ErrorCause, <= 16);
 
 impl Display for ErrorCause {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -239,10 +272,11 @@ impl Display for ErrorCause {
             }
             Self::InvalidTag(tag) => Display::fmt(tag, f),
             Self::InvalidFlags(flags) => Display::fmt(flags, f),
-            Self::VectorLength => f.write_str("expected item count prefix for vector"),
+            Self::Vector(bad) => Display::fmt(bad, f),
             Self::NameLength => f.write_str("expected name length"),
             Self::NameContents(e) => e.print("UTF-8 encoded name", f),
             Self::NameEncoding(e) => write!(f, "invalid name encoding: {e}"),
+            Self::Index(name) => write!(f, "could not parse {name} index"),
             Self::SectionId => f.write_str("missing section ID byte"),
             Self::SectionLength => f.write_str("expected section content length"),
             Self::SectionContents(e) => e.print("section contents", f),
@@ -302,6 +336,29 @@ impl Display for ErrorCause {
             Self::ImportDesc { kind } => write!(f, "error parsing importdesc kind {kind:#04X}"),
             Self::Import(field) => write!(f, "could not parse import: missing {field}"),
             Self::ModuleSectionOrder(order) => Display::fmt(order, f),
+            Self::Opcode(bad) => Display::fmt(bad, f),
+            Self::Instr { opcode, reason } => {
+                write!(f, "could not parse `{opcode}` instruction {reason}")
+            }
+            Self::Expr(bad) => Display::fmt(bad, f),
+            Self::MemArg(bad) => write!(f, "could not parse memarg: {bad}"),
         }
+    }
+}
+
+#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+#[cfg(feature = "std")]
+impl std::error::Error for ErrorCause {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(match self {
+            Self::InvalidTag(e) => e,
+            Self::InvalidFlags(e) => e,
+            Self::NameEncoding(e) => e,
+            Self::ModuleSectionOrder(e) => e,
+            Self::Opcode(e) => e,
+            Self::Instr { reason, .. } => reason,
+            Self::Expr(e) => e,
+            _ => return None,
+        })
     }
 }
