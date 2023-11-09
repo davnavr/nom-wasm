@@ -192,7 +192,7 @@ pub enum ErrorCause {
     SectionContents(LengthMismatch),
     #[non_exhaustive]
     CustomSectionName,
-    PreambleMagic(arrayvec::ArrayVec<u8, 4>),
+    PreambleMagic(crate::module::preamble::InvalidMagic),
     PreambleVersion(Option<u32>),
     /// A [`BlockType`](crate::types::BlockType) could not be parsed.
     /// - Contains `None` if the end of input was unexpectedly encountered.
@@ -281,27 +281,7 @@ impl Display for ErrorCause {
             Self::SectionLength => f.write_str("expected section content length"),
             Self::SectionContents(e) => e.print("section contents", f),
             Self::CustomSectionName => f.write_str("expected custom section name"),
-            Self::PreambleMagic(actual) => {
-                f.write_str("not a valid WASM module, ")?;
-
-                f.write_str(if actual.is_empty() {
-                    "missing"
-                } else {
-                    "expected"
-                })?;
-
-                write!(
-                    f,
-                    " WebAssembly magic \"{}\"",
-                    crate::module::preamble::MAGIC.escape_ascii()
-                )?;
-
-                if !actual.is_empty() {
-                    write!(f, ", but got {}", actual.escape_ascii())?;
-                }
-
-                Ok(())
-            }
+            Self::PreambleMagic(bad) => Display::fmt(bad, f),
             Self::PreambleVersion(None) => f.write_str("missing WASM preamble version"),
             Self::PreambleVersion(Some(actual)) => {
                 let expected = u32::from_le_bytes(crate::module::preamble::RECOGNIZED_VERSION);
@@ -354,6 +334,7 @@ impl std::error::Error for ErrorCause {
             Self::InvalidTag(e) => e,
             Self::InvalidFlags(e) => e,
             Self::NameEncoding(e) => e,
+            Self::PreambleMagic(e) => e,
             Self::ModuleSectionOrder(e) => e,
             Self::Opcode(e) => e,
             Self::Instr { reason, .. } => reason,

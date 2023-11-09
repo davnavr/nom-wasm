@@ -9,6 +9,7 @@ mod verbose_error;
 #[doc(no_inline)]
 pub use crate::{
     isa::{InvalidExpr, InvalidInstr, InvalidOpcode},
+    module::preamble::InvalidMagic,
     values::InvalidVector,
 };
 pub use cause::{
