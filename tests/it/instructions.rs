@@ -8,7 +8,7 @@ fn basic_expr() {
 
     nom_wasm::isa::expr::<_, VerboseError>(expr, instructions::Parser::new(&mut results)).unwrap();
 
-    let mut text = arrayvec::ArrayString::<256>::new_const();
+    let mut text = String::with_capacity(128);
     for instr in results.into_iter() {
         let _ = writeln!(&mut text, "{instr}");
     }
