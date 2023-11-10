@@ -5,9 +5,11 @@ use crate::{
 use nom::Parser;
 
 mod bounded_vector_iter;
+mod full_vector_iter;
 mod vector_iter;
 
 pub use bounded_vector_iter::BoundedVectorIter;
+pub use full_vector_iter::FullVectorIter;
 pub use vector_iter::VectorIter;
 
 /// Describes why a WebAssembly vector could not be parsed.
@@ -38,56 +40,6 @@ impl core::fmt::Display for InvalidVector {
 pub fn vector_length<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, u32, E> {
     crate::values::leb128_u32(input)
         .add_cause_with(|| error::ErrorCause::Vector(InvalidVector::Length))
-}
-
-#[deprecated]
-fn sequence_inner<'a, E, P>(mut input: &'a [u8], count: usize, mut parser: P) -> Parsed<'a, (), E>
-where
-    E: ErrorSource<'a>,
-    P: nom::Parser<&'a [u8], (), E>,
-{
-    for i in 0..count {
-        match parser.parse(input) {
-            Ok((remaining, ())) => input = remaining,
-            Err(nom::Err::Error(e)) => {
-                return Err(nom::Err::Error(
-                    E::append(input, error::ErrorKind::Count, e).with_cause(
-                        error::ErrorCause::Vector(InvalidVector::Remaining {
-                            expected: (count - i).try_into().unwrap_or(u32::MAX),
-                        }),
-                    ),
-                ))
-            }
-            Err(err) => return Err(err),
-        }
-    }
-
-    Ok((input, ()))
-}
-
-#[deprecated]
-#[inline]
-pub(crate) fn sequence<'a, E, C, P>(input: &'a [u8], count: C, parser: P) -> Parsed<'a, (), E>
-where
-    E: ErrorSource<'a>,
-    C: nom::ToUsize,
-    P: nom::Parser<&'a [u8], (), E>,
-{
-    sequence_inner(input, count.to_usize(), parser)
-}
-
-/// Parses a [WebAssembly vector], which is a sequence of elements prefixed by a [`u32` length].
-///
-/// [WebAssembly vector]: https://webassembly.github.io/spec/core/binary/conventions.html#vectors
-/// [`u32` length]: vector_length
-#[deprecated]
-pub fn vector<'a, E, P>(input: &'a [u8], parser: P) -> Parsed<'a, (), E>
-where
-    E: ErrorSource<'a>,
-    P: nom::Parser<&'a [u8], (), E>,
-{
-    let (input, count) = vector_length(input)?;
-    sequence(input, count, parser)
 }
 
 fn sequence_fold_inner<'a, O, E, R>(
@@ -143,11 +95,7 @@ where
 ///
 /// [WebAssembly vector]: https://webassembly.github.io/spec/core/binary/conventions.html#vectors
 /// [`u32` length]: vector_length
-pub fn vector_fold<'a, O, E, R, I, P, F>(
-    mut init: I,
-    mut parser: P,
-    fold: F,
-) -> impl Parser<&'a [u8], R, E>
+pub fn vector_fold<'a, O, E, R, I, P, F>(init: I, parser: P, fold: F) -> impl Parser<&'a [u8], R, E>
 where
     E: ErrorSource<'a>,
     I: FnMut(usize) -> R,
@@ -165,6 +113,7 @@ where
     //         fold,
     //     )
     // })
+
     struct VectorFold<I, P, F, O> {
         init: I,
         parser: P,
@@ -199,6 +148,10 @@ where
     }
 }
 
+/// Parses a [WebAssembly vector], parsing each element with the given `parser`, and collecting
+/// them.
+///
+/// [WebAssembly vector]: vector_fold()
 pub fn vector_collect<'a, O, E, I, C, P>(init: I, parser: P) -> impl Parser<&'a [u8], C, E>
 where
     E: ErrorSource<'a>,
@@ -212,6 +165,23 @@ where
     })
 }
 
-//pub fn vector2<'a, O, E, P>(parser: P) -> impl Parser<&'a [u8], alloc::vec::Vec<O>, E> {
-//
-//}
+/// Parses a [WebAssembly vector], parsing each element with the given `parser`, and collecting
+/// them into a [`Vec<O>`](alloc::vec::Vec).
+///
+/// [WebAssembly vector]: vector_fold()
+#[cfg_attr(doc_cfg, doc(cfg(feature = "alloc")))]
+#[cfg(feature = "alloc")]
+pub fn vector<'a, O, E, P>(parser: P) -> impl Parser<&'a [u8], alloc::vec::Vec<O>, E>
+where
+    E: ErrorSource<'a>,
+    P: Parser<&'a [u8], O, E>,
+{
+    vector_fold(
+        |cap| alloc::vec::Vec::with_capacity(cap),
+        parser,
+        |_, mut v, item| {
+            v.push(item);
+            v
+        },
+    )
+}

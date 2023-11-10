@@ -1,11 +1,15 @@
-use crate::error;
-use nom::ToUsize;
+use crate::{error::ErrorSource, input::Result};
 
 mod import;
 mod import_desc;
 
-pub use import::Import;
+pub use import::{Import, ImportParser};
 pub use import_desc::ImportDesc;
+
+/// Iterates over the contents of the [`ImportSec`].
+///
+/// See the docuemntation for [`ImportSec::iter_contents()`] for more information.
+pub type ImportSecIter<'a, E> = crate::values::FullVectorIter<'a, Import<'a>, E, ImportParser>;
 
 /// Represents the [*import section*].
 ///
@@ -22,10 +26,7 @@ pub struct ImportSec<'a> {
 
 impl<'a> ImportSec<'a> {
     /// Parses an [`Import`] section from a section's contents.
-    pub fn parse<E>(contents: &'a [u8]) -> crate::input::Result<Self, E>
-    where
-        E: error::ErrorSource<'a>,
-    {
+    pub fn parse<E: ErrorSource<'a>>(contents: &'a [u8]) -> Result<Self, E> {
         let (imports, count) = crate::values::vector_length(contents)?;
         Ok(Self { count, imports })
     }
@@ -33,25 +34,14 @@ impl<'a> ImportSec<'a> {
     /// The expected number of [`Import`]s within the section.
     #[inline]
     pub fn count(&self) -> usize {
-        self.count.to_usize()
+        nom::ToUsize::to_usize(&self.count)
     }
 
-    /// Parses each [`Import`] within the section, passing them to the given closure.
-    pub fn parse_contents<E, F>(&self, mut f: F) -> crate::Parsed<'a, (), E>
-    where
-        E: error::ErrorSource<'a>,
-        F: FnMut(Import<'a>),
-    {
-        crate::values::sequence(self.imports, self.count(), |input| {
-            let (input, import) = Import::parse(input)?;
-            f(import);
-            Ok((input, ()))
-        })
-
-        // TODO: Check for EOF
+    /// Returns an [`Iterator`] over the [`Import`]s within the section.
+    #[inline]
+    pub fn iter_contents<E: ErrorSource<'a>>(&self) -> ImportSecIter<'a, E> {
+        crate::values::VectorIter::new(self.count, self.imports, ImportParser).into()
     }
-
-    //pub fn iter_contents(&self) -> IterImportSec // or crate::values::IterVector<'a, E, ImportParser>
 }
 
 impl<'a> crate::input::AsInput<'a> for ImportSec<'a> {
@@ -63,16 +53,6 @@ impl<'a> crate::input::AsInput<'a> for ImportSec<'a> {
 
 impl core::fmt::Debug for ImportSec<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        // TODO: Use iter_contents?
-        let mut list = f.debug_list();
-        let result = self.parse_contents::<error::Error, _>(|import| {
-            list.entry(&import);
-        });
-
-        if let Err(err) = result {
-            list.entry(&err);
-        }
-
-        list.finish()
+        core::fmt::Debug::fmt(&self.iter_contents::<crate::error::Error>(), f)
     }
 }

@@ -4,6 +4,7 @@ use crate::{
     values::VectorIter,
     Parsed,
 };
+use core::fmt::Debug;
 use nom::{Parser, ToUsize};
 
 /// Wraps a [`VectorIter`] to enforce a minimum number of elements when parsing a vector.
@@ -132,10 +133,11 @@ where
     }
 }
 
-impl<'a, const MIN: u32, T, E, P> core::fmt::Debug for BoundedVectorIter<'a, MIN, T, E, P>
+impl<'a, const MIN: u32, T, E, P> Debug for BoundedVectorIter<'a, MIN, T, E, P>
 where
-    E: ErrorSource<'a>,
-    P: Parser<&'a [u8], T, E>,
+    E: ErrorSource<'a> + Debug,
+    P: Parser<&'a [u8], T, E> + Clone,
+    T: Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&self.vector, f)

@@ -2,11 +2,12 @@ use crate::{
     error::{self, ErrorSource},
     values, Parsed,
 };
+use core::fmt::Debug;
 use nom::Parser;
 
 /// Provides an [`Iterator`] implementation for parsing a [WebAssembly vector].
 ///
-/// [WebAssembly vector]: crate::values::vector()
+/// [WebAssembly vector]: crate::values::vector_fold()
 #[must_use = "call Iterator::next() or finish()"]
 pub struct VectorIter<'a, T, E, P>
 where
@@ -44,7 +45,14 @@ where
         Ok(Self::new(remaining, input, parser))
     }
 
-    /// Gets the remaining `input` and the [`Parser`] used to parse the vector's elements.
+    /// Returns `true` if there are elements that have yet to be parsed.
+    #[inline]
+    pub fn has_remaining(&self) -> bool {
+        self.remaining > 0
+    }
+
+    /// Parses all of the remaining elements, returning the remaining `input` and the [`Parser`]
+    /// used to parse the vector's elements.
     #[inline]
     pub fn finish(mut self) -> Parsed<'a, P, E> {
         for result in &mut self {
@@ -75,13 +83,17 @@ where
                         .try_into()
                         .unwrap_or(u32::MAX);
 
-                    Err(err.map(|e| {
-                        E::append(self.input, error::ErrorKind::Count, e).with_cause(
+                    let error = err.map(|other| {
+                        E::append(self.input, error::ErrorKind::Count, other).with_cause(
                             error::ErrorCause::Vector(values::InvalidVector::Remaining {
                                 expected,
                             }),
                         )
-                    }))
+                    });
+
+                    self.remaining = 0;
+                    self.input = &[];
+                    Err(error)
                 }
             })
         } else {
@@ -91,7 +103,7 @@ where
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         (
-            !self.input.is_empty() as usize,
+            (!self.input.is_empty() || self.remaining > 0) as usize,
             Some(self.input.len().min(self.remaining)),
         )
     }
@@ -137,15 +149,21 @@ where
     }
 }
 
-impl<'a, T, E, P> core::fmt::Debug for VectorIter<'a, T, E, P>
+impl<'a, T, E, P> Debug for VectorIter<'a, T, E, P>
 where
-    E: ErrorSource<'a>,
-    P: Parser<&'a [u8], T, E>,
+    E: ErrorSource<'a> + Debug,
+    P: Parser<&'a [u8], T, E> + Clone,
+    T: Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("VectorIter")
-            .field("remaining", &self.remaining)
-            .field("input", &crate::hex::Bytes(self.input))
-            .finish_non_exhaustive()
+        let mut list = f.debug_list();
+        for result in self.clone() {
+            list.entry(match &result {
+                Ok(ref ok) => ok,
+                Err(ref err) => err,
+            });
+        }
+
+        list.finish()
     }
 }

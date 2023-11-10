@@ -13,12 +13,15 @@ mod vector;
 
 pub mod leb128;
 
-pub(crate) use vector::sequence;
+pub(crate) use vector::sequence_fold;
 
 pub use float::{F32, F64};
 pub use leb128::{s32 as leb128_s32, s64 as leb128_s64, u32 as leb128_u32, u64 as leb128_u64};
 pub use v128::{V128ShuffleLanes, V128};
-pub use vector::{vector, vector_length, BoundedVectorIter, InvalidVector, VectorIter};
+pub use vector::{
+    vector, vector_collect, vector_fold, vector_length, BoundedVectorIter, FullVectorIter,
+    InvalidVector, VectorIter,
+};
 
 /// Parses a [WebAssembly **`name`**] prefixed by a [*LEB128* length] from the given `input`.
 ///
