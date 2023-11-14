@@ -1,112 +1,113 @@
 use crate::{
     error::{self, ErrorSource},
-    types,
+    parser::Parser as _,
+    types::{self, ValTypeParser},
 };
 use nom::Parser;
 
-mod alloc_func_type;
-
-pub use alloc_func_type::{BuildFuncType, FuncType};
-
-/// Trait for parsing a WebAssembly [function type].
-///
-/// [function type]: https://webassembly.github.io/spec/core/binary/types.html#function-types
-pub trait ParseFuncType {
-    /// Handles parsing the individual parameter or result types of the function type.
-    type ResultType<'a>: types::ParseResultType
-    where
-        Self: 'a;
-
-    /// Handles parsing the parameter types of a function type.
-    fn parameters(&mut self) -> Self::ResultType<'_>;
-
-    /// Handles parsing the result types of a function type.
-    ///
-    /// Called after the [`ParseFuncType::parameters()`] method.
-    fn results(&mut self) -> Self::ResultType<'_>;
-}
-
-impl<'b, P: ParseFuncType> ParseFuncType for &'b mut P {
-    type ResultType<'a> = P::ResultType<'a> where 'b: 'a;
-
-    #[inline]
-    fn parameters(&mut self) -> Self::ResultType<'_> {
-        P::parameters(self)
-    }
-
-    #[inline]
-    fn results(&mut self) -> Self::ResultType<'_> {
-        P::results(self)
-    }
-}
-
-/// Provides a [`nom::Parser`] implementation for an existing [`ParseFuncType`] implementation.
-#[derive(Clone, Copy, Debug)]
-pub struct FuncTypeParser<P: ParseFuncType> {
-    parser: P,
-}
-
-impl<P: ParseFuncType> FuncTypeParser<P> {
-    #[allow(missing_docs)]
-    #[inline]
-    pub fn new(parser: P) -> Self {
-        Self { parser }
-    }
-
-    #[allow(missing_docs)]
-    #[inline]
-    pub fn into_inner(self) -> P {
-        self.parser
-    }
-}
-
-impl<'a, P, E> Parser<&'a [u8], (), E> for FuncTypeParser<P>
-where
-    P: ParseFuncType,
-    E: ErrorSource<'a>,
-{
-    #[inline]
-    fn parse(&mut self, input: &'a [u8]) -> crate::Parsed<'a, (), E> {
-        func_type(input, &mut self.parser).map(|(input, _)| (input, ()))
-    }
-}
-
-impl<'a, P, E> Parser<&'a [u8], (), E> for &mut FuncTypeParser<P>
-where
-    P: ParseFuncType,
-    E: ErrorSource<'a>,
-{
-    #[inline]
-    fn parse(&mut self, input: &'a [u8]) -> crate::Parsed<'a, (), E> {
-        FuncTypeParser::parse(self, input)
-    }
-}
-
 const FUNC_TYPE_TAG: u8 = 0x60;
 
-//fn func_type_no_tag // parse without FUNC_TYPE_TAG
-
-/// Parses a WebAssembly [function type].
+/// Parses a WebAssembly [result type], which encodes the argument and result types within a
+/// [function type].
 ///
-/// If you need to parse a function type with a [`nom::Parser`], use the [`FuncTypeParser<P>`] struct instead.
+/// [result type]: https://webassembly.github.io/spec/core/binary/types.html#result-types
+/// [function type]: func_type_with()
+pub struct ResultTypeIter<'a, E: ErrorSource<'a>> {
+    iterator: crate::values::VectorIter<'a, types::ValType, E, ValTypeParser>,
+    result: crate::input::Result<(), E>,
+}
+
+impl<'a, E: ErrorSource<'a>> ResultTypeIter<'a, E> {
+    fn new(input: &'a [u8]) -> crate::input::Result<Self, E> {
+        crate::values::VectorIter::with_parsed_length(input, ValTypeParser).map(|iterator| Self {
+            iterator,
+            result: Ok(()),
+        })
+    }
+
+    fn finish(self) -> crate::Parsed<'a, (), E> {
+        self.result?;
+        self.iterator
+            .finish()
+            .map(|(input, ValTypeParser)| (input, ()))
+    }
+}
+
+impl<'a, E: ErrorSource<'a>> Iterator for ResultTypeIter<'a, E> {
+    type Item = types::ValType;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.result.is_ok() {
+            match self.iterator.next()? {
+                Ok(ty) => Some(ty),
+                Err(err) => {
+                    self.result = Err(err);
+                    None
+                }
+            }
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iterator.size_hint()
+    }
+}
+
+impl<'a, E: ErrorSource<'a>> core::iter::FusedIterator for ResultTypeIter<'a, E> {}
+
+impl<'a, E> core::fmt::Debug for ResultTypeIter<'a, E>
+where
+    E: core::fmt::Debug + ErrorSource<'a>,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let mut list = f.debug_list();
+        if let Err(error) = &self.result {
+            list.entry(error);
+        } else {
+            let mut items = Self {
+                iterator: self.iterator.clone(),
+                result: Ok(()),
+            };
+            list.entries(&mut items);
+            if let Err(error) = items.finish() {
+                list.entry(&error);
+            }
+        }
+
+        list.finish()
+    }
+}
+
+/// Parses a WebAssembly [function type], also known as a **`functype`**.
 ///
 /// [function type]: https://webassembly.github.io/spec/core/binary/types.html#function-types
-pub fn func_type<'a, P, E>(input: &'a [u8], mut parsers: P) -> crate::Parsed<'a, P, E>
+pub fn func_type_with<'a, E, A, B, C, I, P, R>(
+    mut init: I,
+    mut param_types: P,
+    mut result_types: R,
+) -> impl Parser<&'a [u8], C, E>
 where
-    P: ParseFuncType,
     E: ErrorSource<'a>,
+    I: FnMut() -> A,
+    P: FnMut(A, &mut ResultTypeIter<'a, E>) -> B,
+    R: FnMut(B, &mut ResultTypeIter<'a, E>) -> C,
 {
-    let input = if let Some((&FUNC_TYPE_TAG, input)) = input.split_first() {
-        input
-    } else {
-        return Err(nom::Err::Failure(E::from_error_kind_and_cause(
-            input,
-            error::ErrorKind::Tag,
-            error::ErrorCause::InvalidTag(error::InvalidTag::FuncType(input.first().copied())),
-        )));
-    };
+    let mut func_type_tag = nom::bytes::streaming::tag([FUNC_TYPE_TAG]).with_error_cause(|input| {
+        error::ErrorCause::InvalidTag(error::InvalidTag::FuncType(input.first().copied()))
+    });
 
-    let (input, _) = types::result_type(input, parsers.parameters())?;
-    let (input, _) = types::result_type(input, parsers.results())?;
-    Ok((input, parsers))
+    move |input| -> crate::Parsed<'a, _, E> {
+        let (input, _) = func_type_tag.parse(input)?;
+        let state = init();
+        let mut parameters_iter = ResultTypeIter::new(input)?;
+        let state = param_types(state, &mut parameters_iter);
+        let (input, ()) = parameters_iter.finish()?;
+        let mut results_iter = ResultTypeIter::new(input)?;
+        let state = result_types(state, &mut results_iter);
+        let (input, ()) = results_iter.finish()?;
+        Ok((input, state))
+    }
 }

@@ -1,9 +1,4 @@
-use crate::{
-    error::ErrorSource,
-    input::Result,
-    storage::Vector,
-    types::{self, BuildFuncType, FuncType, FuncTypeParser, ParseFuncType},
-};
+use crate::{error::ErrorSource, input::Result, storage::Vector, types};
 use nom::ToUsize as _;
 
 #[cfg(feature = "alloc")]
@@ -29,6 +24,7 @@ impl<'a> TypeSec<'a> {
         Ok(Self { count, types })
     }
 
+    /*
     /// Returns a struct to parse the contents of the *type section*, using the provided
     /// [`ParseFuncType`] implementation.
     pub fn parse_contents_with<P, E>(&self, parser: P) -> Result<P, E>
@@ -36,10 +32,11 @@ impl<'a> TypeSec<'a> {
         P: ParseFuncType,
         E: ErrorSource<'a>,
     {
-        let mut f = FuncTypeParser::new(parser);
-        let (input, ()) = crate::values::sequence(self.types, self.count.to_usize(), &mut f)?;
-        nom::combinator::eof(input)?;
-        Ok(f.into_inner())
+        // let mut f = FuncTypeParser::new(parser);
+        // let (input, ()) = crate::values::sequence(self.types, self.count.to_usize(), &mut f)?;
+        // nom::combinator::eof(input)?;
+        // Ok(f.into_inner())
+        todo!()
     }
 
     /// Parse the contents of the *type section* with a given [`ParseFuncType`] implementation.
@@ -64,15 +61,16 @@ impl<'a> TypeSec<'a> {
         V: Vector<Item = FuncType<B>>,
         B: Vector<Item = types::ValType> + Clone,
     {
-        let count = self.count.to_usize();
-        destination.reserve(count);
-        let (input, ()) = crate::values::sequence(self.types, count, |input| {
-            let (input, func_type) = FuncType::parse::<E, B>(input, buffer)?;
-            destination.push(func_type);
-            Ok((input, ()))
-        })?;
-        nom::combinator::eof(input)?;
-        Ok(())
+        // let count = self.count.to_usize();
+        // destination.reserve(count);
+        // let (input, ()) = crate::values::sequence(self.types, count, |input| {
+        //     let (input, func_type) = FuncType::parse::<E, B>(input, buffer)?;
+        //     destination.push(func_type);
+        //     Ok((input, ()))
+        // })?;
+        // nom::combinator::eof(input)?;
+        // Ok(())
+        todo!()
     }
 
     /// Parses all of the contents of the *type section*, returning a [`Vec`] of all of the parsed
@@ -89,6 +87,7 @@ impl<'a> TypeSec<'a> {
         self.parse_all_contents_with(&mut types, buffer)?;
         Ok(types)
     }
+    */
 }
 
 impl<'a> crate::input::AsInput<'a> for TypeSec<'a> {
