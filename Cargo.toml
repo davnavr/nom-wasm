@@ -12,14 +12,19 @@ rustdoc-args = ["--cfg", "doc_cfg"]
 
 [dependencies]
 nom = { version = "7.1.3", default-features = false }
-allocator-api2 = { version = "0.2.16", default-features = false, features = ["alloc"], optional = true }
+
+[dependencies.allocator-api2]
+version = "0.2.16"
+default-features = false
+features = ["alloc"]
+optional = true
 
 [dev-dependencies]
 insta = "1.34.0"
 
 [features]
-default = ["std"]
-std = ["alloc", "nom/std", "allocator-api2"]
+default = ["std", "allocator-api2"]
+std = ["alloc", "nom/std"]
 alloc = ["nom/alloc"]
 allocator-api2 = ["dep:allocator-api2", "alloc"]
 
