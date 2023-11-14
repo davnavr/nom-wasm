@@ -1,4 +1,4 @@
-use crate::{error::ErrorSource, input::Result, storage::Vector, types};
+use crate::{error::ErrorSource, input::Result, types};
 use nom::ToUsize as _;
 
 #[cfg(feature = "alloc")]
