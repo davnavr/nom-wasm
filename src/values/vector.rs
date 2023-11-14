@@ -160,7 +160,7 @@ where
     P: Parser<&'a [u8], O, E>,
 {
     vector_fold(init, parser, |_, mut collection, item| {
-        collection.extend(std::iter::once(item));
+        collection.extend(core::iter::once(item));
         collection
     })
 }
