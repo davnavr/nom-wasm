@@ -19,6 +19,9 @@ extern crate alloc;
 
 pub use nom;
 
+#[cfg(feature = "allocator-api2")]
+pub use allocator_api2;
+
 mod hex;
 mod parser;
 mod static_assert;
