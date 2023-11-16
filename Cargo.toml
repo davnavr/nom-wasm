@@ -23,7 +23,8 @@ optional = true
 insta = "1.34.0"
 
 [features]
-default = ["std", "allocator-api2"]
+default = ["std", "allocator-api2", "allow-unsafe"]
+allow-unsafe = []
 std = ["alloc", "nom/std"]
 alloc = ["nom/alloc"]
 allocator-api2 = ["dep:allocator-api2", "alloc"]

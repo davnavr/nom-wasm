@@ -13,6 +13,7 @@
 #![deny(clippy::exhaustive_enums)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
+#![cfg_attr(not(feature = "allow-unsafe"), forbid(unsafe_code))]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;

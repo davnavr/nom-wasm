@@ -21,10 +21,21 @@ macro_rules! opcode_enum {
         impl Opcode {
             /// Gets a list of all of the opcodes supported by [`nom-wasm`](crate).
             pub const ALL: &[Self] = &[$(Self::$pascal_ident,)*];
+        }
+
+        #[cfg(feature = "allow-unsafe")]
+        impl Opcode {
             const WASM_NAMES: &[*const u8] = &[$($wasm_name.as_ptr(),)*];
             const WASM_NAME_LENS: &[u8] = &[$($wasm_name.len() as u8,)*];
             const DEBUG_NAMES: &[*const u8] = &[$(stringify!($pascal_ident).as_ptr(),)*];
             const DEBUG_NAME_LENS: &[u8] = &[$(stringify!($pascal_ident).len() as u8,)*];
+        }
+
+        #[cfg(not(feature = "allow-unsafe"))]
+        impl Opcode {
+            // Less efficient lookups
+            const WASM_NAMES: &[&'static str] = &[$($wasm_name,)*];
+            const DEBUG_NAMES: &[&'static str] = &[$(stringify!($pascal_ident),)*];
         }
     };
 }
@@ -113,29 +124,46 @@ impl Opcode {
     /// [WebAssembly text format]: https://webassembly.github.io/spec/core/text/instructions.html
     #[inline]
     pub const fn name(self) -> &'static str {
-        // Can't use get_unchecked in const context
-        // Bounds checks are eliminated by optimizer
-        let data: *const u8 = Self::WASM_NAMES[self as usize];
-        let len = Self::WASM_NAME_LENS[self as usize];
+        // Bounds checks should be  eliminated by optimizer
 
-        // Safety: self is a valid index, bytes is valid UTF-8
-        unsafe {
-            let bytes: &'static [u8] = core::slice::from_raw_parts(data, len as usize);
-            core::str::from_utf8_unchecked(bytes)
+        #[cfg(feature = "allow-unsafe")]
+        {
+            // Note that `get_unchecked()` can't be used in a `const` context
+            let data: *const u8 = Self::WASM_NAMES[self as usize];
+            let len = Self::WASM_NAME_LENS[self as usize];
+
+            // Safety: self is a valid index, bytes is valid UTF-8
+            unsafe {
+                let bytes: &'static [u8] = core::slice::from_raw_parts(data, len as usize);
+                return core::str::from_utf8_unchecked(bytes);
+            }
         }
+
+        #[cfg(not(feature = "allow-unsafe"))]
+        return Self::WASM_NAMES[self as usize];
     }
 }
 
 impl core::fmt::Debug for Opcode {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        // Safety: self is a valid index, bytes is valid UTF-8
-        let name = unsafe {
-            let index = *self as usize;
-            let data = *Self::DEBUG_NAMES.get_unchecked(index);
-            let len = *Self::DEBUG_NAME_LENS.get_unchecked(index);
-            let bytes: &'static [u8] = core::slice::from_raw_parts(data, len as usize);
-            core::str::from_utf8_unchecked(bytes)
-        };
+        let index = *self as usize;
+        let name: &'static str;
+
+        #[cfg(feature = "allow-unsafe")]
+        {
+            // Safety: `self` is a valid index, `bytes` is valid UTF-8
+            name = unsafe {
+                let data = *Self::DEBUG_NAMES.get_unchecked(index);
+                let len = *Self::DEBUG_NAME_LENS.get_unchecked(index);
+                let bytes: &'static [u8] = core::slice::from_raw_parts(data, len as usize);
+                core::str::from_utf8_unchecked(bytes)
+            };
+        }
+
+        #[cfg(not(feature = "allow-unsafe"))]
+        {
+            name = Self::DEBUG_NAMES[index];
+        }
 
         f.debug_tuple(name).finish()
     }

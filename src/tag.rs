@@ -44,20 +44,32 @@ macro_rules! enumeration_basic {
                     $($case_name,)*
                 }
 
-                const DEBUG_NAMES: &[*const u8] = &[$(stringify!($case_name).as_ptr()),*];
-                const DEBUG_NAME_LENS: &[u8] = &[$(stringify!($case_name).len() as u8),*];
-
                 let key = match self {
                     $(Self::$case_name => Key::$case_name,)*
                 };
 
-                // Safety: key is always in bounds, pointer is to valid UTF-8
-                let name: &'static str = unsafe {
-                    let ptr: *const u8 = *DEBUG_NAMES.get_unchecked(key as usize);
-                    let len: u8 = *DEBUG_NAME_LENS.get_unchecked(key as usize);
-                    let bytes: &'static [u8] = core::slice::from_raw_parts(ptr, len as usize);
-                    core::str::from_utf8_unchecked(bytes)
-                };
+                let name: &'static str;
+
+                #[cfg(feature = "allow-unsafe")]
+                {
+                    const DEBUG_NAMES: &[*const u8] = &[$(stringify!($case_name).as_ptr()),*];
+                    const DEBUG_NAME_LENS: &[u8] = &[$(stringify!($case_name).len() as u8),*];
+
+                    // Safety: key is always in bounds, pointer is to valid UTF-8
+                    name = unsafe {
+                        let ptr: *const u8 = *DEBUG_NAMES.get_unchecked(key as usize);
+                        let len: u8 = *DEBUG_NAME_LENS.get_unchecked(key as usize);
+                        let bytes: &'static [u8] = core::slice::from_raw_parts(ptr, len as usize);
+                        core::str::from_utf8_unchecked(bytes)
+                    };
+                }
+
+                #[cfg(not(feature = "allow-unsafe"))]
+                {
+                    // Less efficient lookup
+                    const DEBUG_NAMES: &[&'static str] = &[$(stringify!($case_name)),*];
+                    name = DEBUG_NAMES[key as usize];
+                }
 
                 f.debug_tuple(name).finish()
             }
