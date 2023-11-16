@@ -7,6 +7,12 @@ mod limits;
 mod type_parsers;
 mod val_type;
 
+#[cfg(feature = "alloc")]
+mod alloc_func_type;
+
+#[cfg(feature = "alloc")]
+pub use alloc_func_type::{FuncType, FuncTypeParser};
+
 pub use crate::module::TypeIdx;
 pub use func_type::{func_type_with, ResultTypeIter};
 pub use global_type::{GlobalType, Mutability};
