@@ -199,6 +199,7 @@ impl FuncType {
 
             destination
                 .get_unchecked_mut(parameters.len()..)
+                .get_unchecked_mut(..results.len())
                 .copy_from_slice(core::mem::transmute::<&[ValType], _>(results));
         }
 

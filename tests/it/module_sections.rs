@@ -12,7 +12,7 @@ fn type_sec_example() {
     ];
 
     let result = nom_wasm::module::TypeSec::parse::<VerboseError>(&bytes)
-        .and_then(|types| types.parse_all_contents(&mut Default::default()));
+        .and_then(|types| types.collect_func_types_into_vec(&mut Default::default()));
 
     insta::assert_debug_snapshot!(result)
 }
