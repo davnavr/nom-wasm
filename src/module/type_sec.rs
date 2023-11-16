@@ -1,8 +1,4 @@
-use crate::{error::ErrorSource, input::Result, types};
-use nom::ToUsize as _;
-
-#[cfg(feature = "alloc")]
-use alloc::vec::Vec;
+use crate::{error::ErrorSource, input::Result};
 
 /// Represents the [*type section*] of a WebAssembly module.
 ///
@@ -22,6 +18,39 @@ impl<'a> TypeSec<'a> {
     pub fn parse<E: ErrorSource<'a>>(contents: &'a [u8]) -> Result<Self, E> {
         let (types, count) = crate::values::vector_length(contents)?;
         Ok(Self { count, types })
+    }
+
+    /// Collects all of the [`FuncType`]s in the *type section* into a [`Vec`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the *type section* contained a type that was **not** a [`FuncType`], if
+    /// a [`FuncType`] could not be parsed, or if the length of the *type section* was incorrect.
+    ///
+    /// [`Vec`]: alloc::vec::Vec
+    /// [`FuncType`]: crate::types::FuncType
+    #[cfg(feature = "alloc")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "alloc")))]
+    pub fn collect_func_types_into_vec<E>(
+        &self,
+        parser: &mut crate::types::FuncTypeParser<'a, E>,
+    ) -> Result<alloc::vec::Vec<crate::types::FuncType>, E>
+    where
+        E: ErrorSource<'a>,
+    {
+        use nom::Parser as _;
+
+        nom::combinator::all_consuming(nom::combinator::complete(crate::values::sequence_fold(
+            self.count,
+            alloc::vec::Vec::with_capacity,
+            |input| parser.parse(input),
+            |_, mut types, parsed| {
+                types.push(parsed);
+                types
+            },
+        )))
+        .parse(self.types)
+        .map(|(_, types)| types)
     }
 
     /*

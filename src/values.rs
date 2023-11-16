@@ -13,6 +13,7 @@ mod vector;
 
 pub mod leb128;
 
+#[cfg(feature = "alloc")]
 pub(crate) use vector::sequence_fold;
 
 pub use float::{F32, F64};

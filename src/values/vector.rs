@@ -44,7 +44,7 @@ pub fn vector_length<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, u32,
 
 fn sequence_fold_inner<'a, O, E, R>(
     count: usize,
-    mut init: impl FnMut() -> R,
+    mut init: impl FnMut(usize) -> R,
     mut parser: impl Parser<&'a [u8], O, E>,
     mut fold: impl FnMut(usize, R, O) -> R,
 ) -> impl FnMut(&'a [u8]) -> Parsed<'a, R, E>
@@ -52,7 +52,7 @@ where
     E: ErrorSource<'a>,
 {
     move |mut input| {
-        let mut state = init();
+        let mut state = init(count);
         for i in 0..count {
             match parser.parse(input) {
                 Ok((remaining, item)) => {
@@ -82,7 +82,7 @@ pub(crate) fn sequence_fold<'a, O, E, R, C, I, P, F>(
 ) -> impl Parser<&'a [u8], R, E>
 where
     E: ErrorSource<'a>,
-    I: FnMut() -> R,
+    I: FnMut(usize) -> R,
     P: Parser<&'a [u8], O, E>,
     F: FnMut(usize, R, O) -> R,
     C: nom::ToUsize,
@@ -132,7 +132,7 @@ where
             let (input, count) = vector_length(input)?;
             let mut parse_elements = sequence_fold(
                 count,
-                || (self.init)(nom::ToUsize::to_usize(&count)),
+                |count| (self.init)(count),
                 |input| self.parser.parse(input),
                 &mut self.fold,
             );
