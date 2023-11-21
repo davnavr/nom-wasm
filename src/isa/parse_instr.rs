@@ -74,13 +74,60 @@ macro_rules! parse_instr_method {
 
 /// Trait for parsing [WebAssembly instructions].
 ///
-/// A WebAssembly instruction can be parsed with a [`ParseInstr`] implementation with the
-/// [`isa::instr()`] parser.
+/// A WebAssembly instruction can be parsed by calling [`ParseInstr::parse()`] or
+/// [`ParseInstr::parse_expr()`], or by creating a [`nom::Parser`] with
+/// [`ParseInstr::into_parser()`] or [`ParseInstr::into_expr_parser()`].
 ///
 /// [WebAssembly instructions]: https://webassembly.github.io/spec/core/binary/instructions.html
 #[allow(missing_docs)]
 pub trait ParseInstr<'a, E: ErrorSource<'a>> {
     crate::isa::instr_definitions::all!(parse_instr_method);
+
+    /// Parses a single [WebAssembly instruction].
+    ///
+    /// To instead create a [`nom::Parser`], call [`ParseInstr::into_parser()`].
+    ///
+    /// [WebAssembly instruction]: https://webassembly.github.io/spec/core/binary/instructions.html
+    #[inline]
+    fn parse(&mut self, input: &'a [u8]) -> crate::Parsed<'a, (), E> {
+        nom::Parser::parse(&mut self.into_parser(), input)
+    }
+
+    /// Returns a [`nom::Parser`] implementation for parsing a [WebAssembly instruction] with this
+    /// [`ParseInstr`] implementation.
+    ///
+    /// [WebAssembly instruction]: https://webassembly.github.io/spec/core/binary/instructions.html
+    #[inline]
+    fn into_parser(self) -> isa::InstrParser<'a, E, Self>
+    where
+        Self: Sized,
+    {
+        isa::InstrParser::new(self)
+    }
+
+    /// Parses an entire [WebAssembly expression], which is a sequence of instructions terminated with an
+    /// [**`end`**] instruction.
+    ///
+    /// To instead create a [`nom::Parser`], call [`ParseInstr::into_expr_parser()`].
+    ///
+    /// [WebAssembly expression]: https://webassembly.github.io/spec/core/binary/instructions.html#expressions
+    /// [`nom_wasm::isa::expr()`]: isa::expr()
+    /// [**`end`**]: ParseInstr::end()
+    fn parse_expr(&mut self, input: &'a [u8]) -> crate::Parsed<'a, (), E> {
+        nom::Parser::parse(&mut self.into_expr_parser(), input)
+    }
+
+    /// Returns a [`nom::Parser`] implementation for parsing a [WebAssembly expression] with this
+    /// [`ParseInstr`] implementation.
+    ///
+    /// [WebAssembly expression]: https://webassembly.github.io/spec/core/binary/instructions.html#expressions
+    #[inline]
+    fn into_expr_parser(self) -> isa::ExprParser<'a, E, Self>
+    where
+        Self: Sized,
+    {
+        isa::ExprParser::new(self)
+    }
 }
 
 macro_rules! instr_method_define_delegate {
@@ -129,7 +176,7 @@ macro_rules! parse_instr_delegate_method {
 impl<'a, E, P> ParseInstr<'a, E> for &mut P
 where
     E: ErrorSource<'a>,
-    P: ParseInstr<'a, E>,
+    P: ParseInstr<'a, E> + ?Sized,
 {
     crate::isa::instr_definitions::all!(parse_instr_delegate_method);
 }

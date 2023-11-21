@@ -20,22 +20,22 @@ macro_rules! opcode_enum {
 
         impl Opcode {
             /// Gets a list of all of the opcodes supported by [`nom-wasm`](crate).
-            pub const ALL: &[Self] = &[$(Self::$pascal_ident,)*];
+            pub const ALL: &'static [Self] = &[$(Self::$pascal_ident,)*];
         }
 
         #[cfg(feature = "allow-unsafe")]
         impl Opcode {
-            const WASM_NAMES: &[*const u8] = &[$($wasm_name.as_ptr(),)*];
-            const WASM_NAME_LENS: &[u8] = &[$($wasm_name.len() as u8,)*];
-            const DEBUG_NAMES: &[*const u8] = &[$(stringify!($pascal_ident).as_ptr(),)*];
-            const DEBUG_NAME_LENS: &[u8] = &[$(stringify!($pascal_ident).len() as u8,)*];
+            const WASM_NAMES: &'static [*const u8] = &[$($wasm_name.as_ptr(),)*];
+            const WASM_NAME_LENS: &'static [u8] = &[$($wasm_name.len() as u8,)*];
+            const DEBUG_NAMES: &'static [*const u8] = &[$(stringify!($pascal_ident).as_ptr(),)*];
+            const DEBUG_NAME_LENS: &'static [u8] = &[$(stringify!($pascal_ident).len() as u8,)*];
         }
 
         #[cfg(not(feature = "allow-unsafe"))]
         impl Opcode {
             // Less efficient lookups
-            const WASM_NAMES: &[&'static str] = &[$($wasm_name,)*];
-            const DEBUG_NAMES: &[&'static str] = &[$(stringify!($pascal_ident),)*];
+            const WASM_NAMES: &'static [&'static str] = &[$($wasm_name,)*];
+            const DEBUG_NAMES: &'static [&'static str] = &[$(stringify!($pascal_ident),)*];
         }
     };
 }

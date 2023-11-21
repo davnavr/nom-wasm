@@ -5,8 +5,10 @@ use crate::{
     types::{BlockType, RefType},
     values::{V128ShuffleLanes, F32, F64, V128},
 };
+use core::marker::PhantomData;
 
-/// Describes an error that occured while parsing a WebAssembly [**`expr`**](expr).
+/// Describes an error that occured while parsing a WebAssembly
+/// [**`expr`**](ParseInstr::parse_expr).
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 #[allow(missing_docs)]
@@ -39,7 +41,7 @@ where
 {
     block_nesting: u32,
     parser: P,
-    _marker: core::marker::PhantomData<fn(&'a [u8]) -> E>,
+    _marker: PhantomData<fn(&'a [u8]) -> E>,
 }
 
 macro_rules! update_block_count {
@@ -96,15 +98,10 @@ where
     crate::isa::instr_definitions::all!(parse_expr_definitions);
 }
 
-/// Parses a [WebAssembly expression], which is a sequence of instructions terminated with an
-/// [**`end`**] instruction.
-///
-/// [WebAssembly expression]: https://webassembly.github.io/spec/core/binary/instructions.html#expressions
-/// [**`end`**]: ParseInstr::end
-pub fn expr<'a, P, E>(mut input: &'a [u8], parser: P) -> crate::Parsed<'a, P, E>
+fn parse<'a, E, P>(mut input: &'a [u8], parser: P) -> crate::Parsed<'a, P, E>
 where
-    P: ParseInstr<'a, E>,
     E: ErrorSource<'a>,
+    P: ParseInstr<'a, E>,
 {
     let mut state = ParseExprInstr {
         block_nesting: 1, // WASM expressions start with an implicit `block`
@@ -113,8 +110,59 @@ where
     };
 
     while state.block_nesting > 0 {
-        input = isa::instr(input, &mut state)?.0;
+        input = state.parse(input)?.0;
     }
 
     Ok((input, state.parser))
+}
+
+/// A [`nom::Parser`] implementation for parsing a [WebAssembly expression].
+///
+/// See the documentation for [`ParseInstr::parse_expr()`] for more information.
+///
+/// [WebAssembly expression]: https://webassembly.github.io/spec/core/binary/instructions.html#expressions
+pub struct ExprParser<'a, E, P>
+where
+    E: ErrorSource<'a>,
+    P: ParseInstr<'a, E>,
+{
+    parser: P,
+    _marker: core::marker::PhantomData<dyn nom::Parser<&'a [u8], (), E>>,
+}
+
+impl<'a, E, P> ExprParser<'a, E, P>
+where
+    E: ErrorSource<'a>,
+    P: ParseInstr<'a, E>,
+{
+    #[inline]
+    pub(in crate::isa) fn new(parser: P) -> Self {
+        Self {
+            parser,
+            _marker: core::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, E, P> nom::Parser<&'a [u8], (), E> for ExprParser<'a, E, P>
+where
+    E: ErrorSource<'a>,
+    P: ParseInstr<'a, E>,
+{
+    #[inline]
+    fn parse(&mut self, input: &'a [u8]) -> crate::Parsed<'a, (), E> {
+        parse(input, &mut self.parser).map(|(input, _)| (input, ()))
+    }
+}
+
+impl<'a, E, P> core::fmt::Debug for ExprParser<'a, E, P>
+where
+    E: ErrorSource<'a>,
+    P: ParseInstr<'a, E> + core::fmt::Debug,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ExprParser")
+            .field("parser", &self.parser)
+            .finish()
+    }
 }

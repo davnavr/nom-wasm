@@ -32,13 +32,10 @@ impl<'a, T, E: ErrorSource<'a>> ResultExt<'a, T, E> for isa::Result<T, E> {
     }
 }
 
-/// Parses a [WebAssembly instruction].
-///
-/// [WebAssembly instruction]: https://webassembly.github.io/spec/core/binary/instructions.html
-pub fn instr<'a, P, E>(input: &'a [u8], mut parser: P) -> crate::Parsed<'a, P, E>
+fn parse<'a, E, P>(input: &'a [u8], mut parser: P) -> crate::Parsed<'a, P, E>
 where
-    P: ParseInstr<'a, E>,
     E: ErrorSource<'a>,
+    P: ParseInstr<'a, E>,
 {
     let start = &input;
     let (input, opcode) = Opcode::parse(input)?;
@@ -695,4 +692,60 @@ where
     };
 
     Ok((input, parser))
+}
+
+/// A [`nom::Parser`] implementation for parsing a [WebAssembly instruction].
+///
+/// See the documentation for the [`ParseInstr::into_parser()`] method for more information.
+///
+/// [WebAssembly instruction]: https://webassembly.github.io/spec/core/binary/instructions.html
+pub struct InstrParser<'a, E, P>
+where
+    E: ErrorSource<'a>,
+    P: ParseInstr<'a, E>,
+{
+    parser: P,
+    _marker: core::marker::PhantomData<dyn nom::Parser<&'a [u8], (), E>>,
+}
+
+impl<'a, E, P> InstrParser<'a, E, P>
+where
+    E: ErrorSource<'a>,
+    P: ParseInstr<'a, E>,
+{
+    pub(in crate::isa) fn new(parser: P) -> Self {
+        Self {
+            parser,
+            _marker: core::marker::PhantomData,
+        }
+    }
+
+    #[inline]
+    #[allow(missing_docs)]
+    pub fn into_parse_instr(self) -> P {
+        self.parser
+    }
+}
+
+impl<'a, E, P> nom::Parser<&'a [u8], (), E> for InstrParser<'a, E, P>
+where
+    E: ErrorSource<'a>,
+    P: ParseInstr<'a, E>,
+{
+    #[inline]
+    fn parse(&mut self, input: &'a [u8]) -> crate::Parsed<'a, (), E> {
+        parse(input, &mut self.parser).map(|(input, _)| (input, ()))
+    }
+}
+
+impl<'a, E, P> core::fmt::Debug for InstrParser<'a, E, P>
+where
+    E: ErrorSource<'a>,
+    P: ParseInstr<'a, E> + core::fmt::Debug,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("InstrParser")
+            .field("parser", &self.parser)
+            .finish()
+    }
 }

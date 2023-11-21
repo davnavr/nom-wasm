@@ -361,7 +361,7 @@ prefixed_opcodes! {
         TableFill = 17,
     }
 
-    /// An opcode value for an instruction prefixed by the `0xFE` ``Opcode`].
+    /// An opcode value for an instruction prefixed by the `0xFE` `Opcode`].
     ///
     /// The feature proposals that introduced these opcodes include:
     /// - The [threads] proposal, which introduced atomic memory instructions.
