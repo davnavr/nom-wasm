@@ -83,18 +83,78 @@ impl core::fmt::Debug for Section<'_> {
     }
 }
 
-/// Parses a sequence of WebAssembly [`Section`]s, passing the `input` before the [`Section`] was
-/// parsed, and the [`Section`] itself, into the given closure.
-pub fn sequence<'a, E, F>(mut input: &'a [u8], mut parser: F) -> Result<(), E>
-where
-    E: ErrorSource<'a>,
-    F: FnMut(&'a [u8], Section<'a>) -> Result<(), E>,
-{
-    while !input.is_empty() {
-        let (remaining, section) = Section::parse(input)?;
-        parser(input, section)?;
-        input = remaining;
+/// Parses a sequence of WebAssembly [`Section`]s.
+///
+/// This is an [`Iterator`] that yields both the remaining input before the [`Section`] was parsed
+/// and the [`Section`] itself.
+#[derive(Clone, Default)]
+#[must_use = "call Iterator::next() or .finish()"]
+pub struct Sequence<'a, E: ErrorSource<'a>> {
+    input: &'a [u8],
+    _marker: core::marker::PhantomData<dyn nom::Parser<&'a [u8], (), E>>,
+}
+
+impl<'a, E: ErrorSource<'a>> Sequence<'a, E> {
+    /// Creates a new [`Sequence`] from the entirety of the given `input`.
+    #[inline]
+    pub fn new(input: &'a [u8]) -> Self {
+        Self {
+            input,
+            _marker: core::marker::PhantomData,
+        }
     }
 
-    Ok(())
+    /// Parses all of the remaining [`Section`]s.
+    pub fn finish(mut self) -> Result<(), E> {
+        while self.next().transpose()?.is_some() {}
+        debug_assert!(self.input.is_empty());
+        Ok(())
+    }
+}
+
+impl<'a, E: ErrorSource<'a>> crate::input::AsInput<'a> for Sequence<'a, E> {
+    #[inline]
+    fn as_input(&self) -> &'a [u8] {
+        self.input
+    }
+}
+
+impl<'a, E: ErrorSource<'a>> Iterator for Sequence<'a, E> {
+    /// The [`Section`] that was parsed, and the remaining input starting with the [`Section`]
+    /// that was parsed.
+    type Item = Result<(&'a [u8], Section<'a>), E>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.input.is_empty() {
+            None
+        } else {
+            let start = self.input;
+            Some(match Section::parse(self.input) {
+                Ok((remaining, section)) => {
+                    self.input = remaining;
+                    Ok((start, section))
+                }
+                Err(err) => {
+                    // Stop parsing early
+                    self.input = &[];
+                    Err(err)
+                }
+            })
+        }
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (usize::from(!self.input.is_empty()), None)
+    }
+}
+
+impl<'a, E: ErrorSource<'a>> core::iter::FusedIterator for Sequence<'a, E> {}
+
+impl<'a, E: ErrorSource<'a>> core::fmt::Debug for Sequence<'a, E> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Sequence")
+            .field("remaining", &crate::hex::Bytes(self.input))
+            .finish()
+    }
 }

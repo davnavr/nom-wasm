@@ -78,10 +78,11 @@ where
     F: FnMut(ModuleSection<'a>, Option<ModuleSectionOrder>) -> Result<(), E>,
     G: FnMut(&'a [u8], Section<'a>, Option<ModuleSectionOrder>) -> Result<(), E>,
 {
+    // TODO: Make an iterator struct ModuleSectionSequence
     let mut order = crate::ordering::Ordering::new();
-    crate::section::sequence(
-        input,
-        |input, section| match ModuleSection::interpret_section(&section) {
+    crate::section::Sequence::new(input).try_for_each(move |result| {
+        let (input, section) = result?;
+        match ModuleSection::interpret_section(&section) {
             Ok(result) => {
                 let known = result?;
                 if let Some(next) = ModuleSectionOrder::from_section_id(known.id()) {
@@ -96,8 +97,8 @@ where
                 f(known, *order.previous())
             }
             Err(_) => g(input, section, *order.previous()),
-        },
-    )
+        }
+    })
 }
 
 fn no_unknown_section<'a, E: ErrorSource<'a>>(
