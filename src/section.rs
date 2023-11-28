@@ -87,11 +87,21 @@ impl core::fmt::Debug for Section<'_> {
 ///
 /// This is an [`Iterator`] that yields both the remaining input before the [`Section`] was parsed
 /// and the [`Section`] itself.
-#[derive(Clone, Default)]
+#[derive(Default)]
 #[must_use = "call Iterator::next() or .finish()"]
 pub struct Sequence<'a, E: ErrorSource<'a>> {
     input: &'a [u8],
     _marker: core::marker::PhantomData<dyn nom::Parser<&'a [u8], (), E>>,
+}
+
+impl<'a, E: ErrorSource<'a>> Clone for Sequence<'a, E> {
+    #[inline]
+    fn clone(&self) -> Self {
+        Self {
+            input: self.input,
+            _marker: core::marker::PhantomData,
+        }
+    }
 }
 
 impl<'a, E: ErrorSource<'a>> Sequence<'a, E> {

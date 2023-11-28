@@ -20,5 +20,6 @@ pub use import_sec::{Import, ImportDesc, ImportParser, ImportSec, ImportSecIter}
 pub use module_section::{ModuleSection, ModuleSectionId};
 pub use module_section_sequence::{
     module_section_sequence, module_section_sequence_with_unknown, ModuleSectionOrder,
+    ModuleSectionSequence, UnknownModuleSection,
 };
 pub use type_sec::TypeSec;

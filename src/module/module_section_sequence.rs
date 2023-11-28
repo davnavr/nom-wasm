@@ -2,6 +2,7 @@ use crate::{
     error::{self, ErrorSource},
     input::Result,
     module::{ModuleSection, ModuleSectionId},
+    ordering::Ordering,
     section::Section,
 };
 
@@ -56,6 +57,174 @@ impl core::fmt::Display for ModuleSectionOrder {
     }
 }
 
+/// Represents either a [`ModuleSection`] or a section with an unknown [*id*]
+///
+/// [*id*]: Section::id
+#[derive(Clone)]
+pub struct UnknownModuleSection<'a> {
+    // Non-public fields, since they may be changed (e.g. could get ModuleSection from Section)
+    remaining: &'a [u8],
+    section: Section<'a>,
+    known: Option<ModuleSection<'a>>,
+    ordering: Ordering<ModuleSectionOrder>,
+}
+
+impl<'a> UnknownModuleSection<'a> {
+    fn new<E: ErrorSource<'a>>(
+        remaining: &'a [u8],
+        section: Section<'a>,
+        ordering: &mut Ordering<ModuleSectionOrder>,
+    ) -> Result<Self, E> {
+        let saved_ordering = ordering.clone();
+        let known = match ModuleSection::interpret_section(&section) {
+            Ok(result) => {
+                let module_section = result?;
+
+                if let Some(next) = ModuleSectionOrder::from_section_id(module_section.id()) {
+                    ordering.check(next).map_err(|e| {
+                        nom::Err::Failure(E::from_error_kind_and_cause(
+                            remaining,
+                            error::ErrorKind::Verify,
+                            error::ErrorCause::ModuleSectionOrder(e),
+                        ))
+                    })?;
+                }
+
+                Some(module_section)
+            }
+            Err(_) => None,
+        };
+
+        Ok(Self {
+            remaining,
+            section,
+            known,
+            ordering: saved_ordering,
+        })
+    }
+
+    /// The remaining input, starting with the [*id*] of this module section.
+    ///
+    /// [*id*]: Section::id
+    #[inline]
+    pub fn remaining_input(&self) -> &'a [u8] {
+        self.remaining
+    }
+
+    #[allow(missing_docs)]
+    #[inline]
+    pub fn section(&self) -> Section<'a> {
+        self.section
+    }
+
+    /// Interprets the [`Section`] as a [`ModuleSection`].
+    ///
+    /// Returns `None` if the section was neither a known module section or a [`Custom`] section.
+    ///
+    /// See the documentation for [`ModuleSection::interpret_section()`] for more information.
+    ///
+    /// [`Custom`]: ModuleSection::Custom
+    #[inline]
+    pub fn to_module_section(&self) -> Option<ModuleSection<'a>> {
+        self.known.clone()
+    }
+
+    /// The current [`ModuleSectionOrder`] when this module section was parsed.
+    ///
+    /// Call the [`Ordering::previous()`] method to determine which [`ModuleSection`] was
+    /// previously parsed.
+    #[inline]
+    pub fn ordering(&self) -> Ordering<ModuleSectionOrder> {
+        self.ordering.clone()
+    }
+}
+
+impl core::fmt::Debug for UnknownModuleSection<'_> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let mut s;
+        if let Some(section) = &self.known {
+            s = f.debug_struct("Known");
+            s.field("section", section)
+        } else {
+            s = f.debug_struct("Unknown");
+            s.field("section", &self.section)
+        }
+        .field("ordering", &self.ordering)
+        .finish()
+    }
+}
+
+/// Parses the sequence of [`ModuleSection`]s after the [`preamble`] within a WebAssembly module.
+///
+/// An error is yielded as the last item if a [`Section`] could not be parsed, or if non-custom [`ModuleSection`]s were not in the
+/// correct order according to the [`ModuleSectionOrder`].
+///
+/// [`preamble`]: crate::module::preamble
+#[must_use = "call Iterator::next() or .finish()"]
+pub struct ModuleSectionSequence<'a, E: ErrorSource<'a>> {
+    sections: crate::section::Sequence<'a, E>,
+    ordering: Ordering<ModuleSectionOrder>,
+    _marker: core::marker::PhantomData<fn() -> E>,
+}
+
+impl<'a, E> From<crate::section::Sequence<'a, E>> for ModuleSectionSequence<'a, E>
+where
+    E: ErrorSource<'a>,
+{
+    fn from(sections: crate::section::Sequence<'a, E>) -> Self {
+        Self {
+            sections,
+            ordering: Ordering::new(),
+            _marker: core::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, E: ErrorSource<'a>> Clone for ModuleSectionSequence<'a, E> {
+    fn clone(&self) -> Self {
+        Self {
+            sections: self.sections.clone(),
+            ordering: self.ordering.clone(),
+            _marker: core::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, E: ErrorSource<'a>> ModuleSectionSequence<'a, E> {
+    /// Gets the current ordering of [`ModuleSection`]s.
+    #[inline]
+    pub fn ordering(&self) -> Ordering<ModuleSectionOrder> {
+        self.ordering.clone()
+    }
+
+    //fn finish
+}
+
+impl<'a, E: ErrorSource<'a>> Iterator for ModuleSectionSequence<'a, E> {
+    type Item = Result<UnknownModuleSection<'a>, E>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.sections.next().map(|result| {
+            let (remaining, section) = result?;
+            UnknownModuleSection::new(remaining, section, &mut self.ordering)
+        })
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.sections.size_hint()
+    }
+}
+
+impl<'a, E: ErrorSource<'a>> core::iter::FusedIterator for ModuleSectionSequence<'a, E> {}
+
+// TODO: Common code for VectorIterm section::Sequencem and ModuleSectionSequence
+impl<'a, E: ErrorSource<'a>> core::fmt::Debug for ModuleSectionSequence<'a, E> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        todo!()
+    }
+}
+
 /// Parses the sequence of [`ModuleSection`]s after the [`preamble`] within a WebAssembly module,
 /// with custom handling for unknown sections.
 ///
@@ -68,6 +237,7 @@ impl core::fmt::Display for ModuleSectionOrder {
 /// correct order.
 ///
 /// [`preamble`]: crate::module::preamble
+#[deprecated(note = "use ModuleSectionSequence")]
 pub fn module_section_sequence_with_unknown<'a, E, F, G>(
     input: &'a [u8],
     mut f: F,
@@ -85,6 +255,7 @@ where
         match ModuleSection::interpret_section(&section) {
             Ok(result) => {
                 let known = result?;
+
                 if let Some(next) = ModuleSectionOrder::from_section_id(known.id()) {
                     order.check(next).map_err(|e| {
                         nom::Err::Failure(E::from_error_kind_and_cause(
@@ -94,6 +265,7 @@ where
                         ))
                     })?;
                 }
+
                 f(known, *order.previous())
             }
             Err(_) => g(input, section, *order.previous()),

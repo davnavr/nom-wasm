@@ -6,7 +6,7 @@ use core::fmt::Display;
 /// Error when the items processed by an [`Ordering<T>`] are not in the correct order.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
-pub enum OrderingError<T: Copy> {
+pub enum OrderingError<T> {
     /// A duplicate item was encountered.
     Duplicate(T),
     /// An item was not in the correct order.
@@ -14,7 +14,7 @@ pub enum OrderingError<T: Copy> {
     OutOfOrder { next: T, previous: T },
 }
 
-impl<T: Copy + Display> Display for OrderingError<T> {
+impl<T: Display> Display for OrderingError<T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Duplicate(item) => write!(f, "duplicate {item}"),
@@ -27,24 +27,24 @@ impl<T: Copy + Display> Display for OrderingError<T> {
 
 #[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
 #[cfg(feature = "std")]
-impl<T: Copy + core::fmt::Debug + Display> std::error::Error for OrderingError<T> {}
+impl<T: core::fmt::Debug + Display> std::error::Error for OrderingError<T> {}
 
 /// Helper struct to ensure that items are in **ascending** order.
 ///
 /// If you need to check for **descending** order instead, use [`Reverse<T>`](core::cmp::Reverse)
-#[derive(Clone, Copy, Debug)]
-pub struct Ordering<T: Copy + PartialOrd> {
+#[derive(Clone, Debug)]
+pub struct Ordering<T: PartialOrd> {
     previous: Option<T>,
 }
 
-impl<T: Copy + PartialOrd> Default for Ordering<T> {
+impl<T: PartialOrd> Default for Ordering<T> {
     #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: Copy + PartialOrd> Ordering<T> {
+impl<T: PartialOrd> Ordering<T> {
     /// Constructs a new [`Ordering<T>`].
     #[inline]
     pub const fn new() -> Self {
@@ -58,7 +58,10 @@ impl<T: Copy + PartialOrd> Ordering<T> {
     }
 
     /// Checks that the `next` item is in the correct order.
-    pub fn check(&mut self, next: T) -> Result<(), OrderingError<T>> {
+    pub fn check(&mut self, next: T) -> Result<(), OrderingError<T>>
+    where
+        T: Copy,
+    {
         match self.previous {
             Some(previous) if next <= previous => Err(if next == previous {
                 OrderingError::Duplicate(next)
