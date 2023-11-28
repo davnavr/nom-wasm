@@ -54,3 +54,47 @@ pub fn name<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> crate::Parsed<'a, &'a st
         )))
     }
 }
+
+/// Provides a [`core::fmt::Debug`] implementation for [`Iterator`]s yielding [`Result`]s.
+pub(crate) struct SequenceDebug<I> {
+    iterator: I,
+}
+
+impl<T, E, I> From<I> for SequenceDebug<I>
+where
+    I: Clone + Iterator<Item = Result<T, E>>,
+    T: core::fmt::Debug,
+    E: core::fmt::Debug,
+{
+    fn from(iterator: I) -> Self {
+        Self { iterator }
+    }
+}
+
+impl<T, E, I> core::fmt::Debug for SequenceDebug<I>
+where
+    I: Clone + Iterator<Item = Result<T, E>>,
+    T: core::fmt::Debug,
+    E: core::fmt::Debug,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        struct Item<T, E>(Result<T, E>);
+
+        impl<T, E> core::fmt::Debug for Item<T, E>
+        where
+            T: core::fmt::Debug,
+            E: core::fmt::Debug,
+        {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                match &self.0 {
+                    Ok(ok) => core::fmt::Debug::fmt(ok, f),
+                    Err(err) => core::fmt::Debug::fmt(err, f),
+                }
+            }
+        }
+
+        f.debug_list()
+            .entries(self.iterator.clone().map(Item))
+            .finish()
+    }
+}

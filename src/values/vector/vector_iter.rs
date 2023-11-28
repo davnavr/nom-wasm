@@ -156,14 +156,6 @@ where
     T: Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut list = f.debug_list();
-        for result in self.clone() {
-            list.entry(match &result {
-                Ok(ref ok) => ok,
-                Err(ref err) => err,
-            });
-        }
-
-        list.finish()
+        Debug::fmt(&values::SequenceDebug::from(self.clone()), f)
     }
 }

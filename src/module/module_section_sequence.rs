@@ -218,10 +218,12 @@ impl<'a, E: ErrorSource<'a>> Iterator for ModuleSectionSequence<'a, E> {
 
 impl<'a, E: ErrorSource<'a>> core::iter::FusedIterator for ModuleSectionSequence<'a, E> {}
 
-// TODO: Common code for VectorIterm section::Sequencem and ModuleSectionSequence
-impl<'a, E: ErrorSource<'a>> core::fmt::Debug for ModuleSectionSequence<'a, E> {
+impl<'a, E> core::fmt::Debug for ModuleSectionSequence<'a, E>
+where
+    E: ErrorSource<'a> + core::fmt::Debug,
+{
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        todo!()
+        core::fmt::Debug::fmt(&crate::values::SequenceDebug::from(self.clone()), f)
     }
 }
 
