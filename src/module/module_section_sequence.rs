@@ -180,6 +180,15 @@ where
     }
 }
 
+impl<'a, E> From<ModuleSectionSequence<'a, E>> for crate::section::Sequence<'a, E>
+where
+    E: ErrorSource<'a>,
+{
+    fn from(module_sections: ModuleSectionSequence<'a, E>) -> Self {
+        module_sections.sections
+    }
+}
+
 impl<'a, E: ErrorSource<'a>> Clone for ModuleSectionSequence<'a, E> {
     fn clone(&self) -> Self {
         Self {
@@ -190,14 +199,56 @@ impl<'a, E: ErrorSource<'a>> Clone for ModuleSectionSequence<'a, E> {
     }
 }
 
+impl<'a, E: ErrorSource<'a>> crate::input::AsInput<'a> for ModuleSectionSequence<'a, E> {
+    #[inline]
+    fn as_input(&self) -> &'a [u8] {
+        crate::input::AsInput::as_input(&self.sections)
+    }
+}
+
 impl<'a, E: ErrorSource<'a>> ModuleSectionSequence<'a, E> {
+    /// Creates a [`ModuleSectionSequence`] from the sections contained within the given `input`.
+    #[inline]
+    pub fn new(input: &'a [u8]) -> Self {
+        crate::section::Sequence::new(input).into()
+    }
+
     /// Gets the current ordering of [`ModuleSection`]s.
     #[inline]
     pub fn ordering(&self) -> Ordering<ModuleSectionOrder> {
         self.ordering.clone()
     }
 
-    //fn finish
+    /// Returns an [`Iterator`] that returns an [`Err`] for unknown [`Section`]s.
+    pub fn without_unknown(
+        self,
+    ) -> impl Iterator<Item = Result<(ModuleSection<'a>, Ordering<ModuleSectionOrder>), E>> {
+        self.map(|result| {
+            let section = result?;
+            if let Some(known) = section.to_module_section() {
+                Ok((known, section.ordering()))
+            } else {
+                Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                    section.remaining_input(),
+                    error::ErrorKind::Verify,
+                    error::ErrorCause::InvalidTag(error::InvalidTag::ModuleSectionId(
+                        section.section.id,
+                    )),
+                )))
+            }
+        })
+    }
+
+    /// Parses all of the remaining sections, consuming all input.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a [`Section`] could not be parsed, if non-custom [`ModuleSection`]s were not in the
+    /// correct order, or if a non-custom [`Section`] with an unknown [*id*] was encountered.
+    pub fn finish(mut self) -> Result<(), E> {
+        while self.next().transpose()?.is_some() {}
+        Ok(())
+    }
 }
 
 impl<'a, E: ErrorSource<'a>> Iterator for ModuleSectionSequence<'a, E> {
