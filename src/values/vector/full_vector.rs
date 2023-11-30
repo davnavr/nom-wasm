@@ -1,25 +1,25 @@
-use crate::{error::ErrorSource, values::VectorIter};
+use crate::{error::ErrorSource, values::Vector};
 use core::fmt::Debug;
 use nom::{error::ErrorKind, Parser};
 
-/// Wraps a [`VectorIter`] to ensure the end of input is reached after all elements are parsed.
+/// Wraps a [`Vector`] to ensure the end of input is reached after all elements are parsed.
 ///
 /// [WebAssembly vector]: crate::values::vector_fold()
-pub struct FullVectorIter<'a, T, E, P>
+pub struct FullVector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
 {
-    vector: VectorIter<'a, T, E, P>,
+    vector: Vector<'a, T, E, P>,
 }
 
-impl<'a, T, E, P> From<VectorIter<'a, T, E, P>> for FullVectorIter<'a, T, E, P>
+impl<'a, T, E, P> From<Vector<'a, T, E, P>> for FullVector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
 {
     #[inline]
-    fn from(vector: VectorIter<'a, T, E, P>) -> Self {
+    fn from(vector: Vector<'a, T, E, P>) -> Self {
         Self { vector }
     }
 }
@@ -28,7 +28,7 @@ fn expected_eof<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> nom::Err<E> {
     nom::Err::Failure(E::from_error_kind(input, ErrorKind::Eof))
 }
 
-impl<'a, T, E, P> FullVectorIter<'a, T, E, P>
+impl<'a, T, E, P> FullVector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
@@ -49,7 +49,7 @@ where
     }
 }
 
-impl<'a, T, E, P> Clone for FullVectorIter<'a, T, E, P>
+impl<'a, T, E, P> Clone for FullVector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E> + Clone,
@@ -60,7 +60,7 @@ where
     }
 }
 
-impl<'a, T, E, P> crate::input::AsInput<'a> for FullVectorIter<'a, T, E, P>
+impl<'a, T, E, P> crate::input::AsInput<'a> for FullVector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
@@ -71,7 +71,7 @@ where
     }
 }
 
-impl<'a, T, E, P> crate::values::Sequence<'a> for FullVectorIter<'a, T, E, P>
+impl<'a, T, E, P> crate::values::Sequence<'a> for FullVector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
@@ -95,7 +95,7 @@ where
     }
 }
 
-impl<'a, T, E, P> Debug for FullVectorIter<'a, T, E, P>
+impl<'a, T, E, P> Debug for FullVector<'a, T, E, P>
 where
     E: ErrorSource<'a> + Debug,
     P: Parser<&'a [u8], T, E> + Clone,

@@ -5,7 +5,7 @@ use nom::Parser;
 /// Parses a [WebAssembly vector]'s elements one at a time.
 ///
 /// [WebAssembly vector]: crate::values::vector_fold()
-pub struct VectorIter<'a, T, E, P>
+pub struct Vector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
@@ -16,7 +16,7 @@ where
     _marker: core::marker::PhantomData<fn() -> Result<T, E>>,
 }
 
-impl<'a, T, E, P> VectorIter<'a, T, E, P>
+impl<'a, T, E, P> Vector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
@@ -53,7 +53,7 @@ where
         self.remaining > 0
     }
 
-    /// Consumes the [`VectorIter`], parses all remaining elements, and returns the [`Parser`] used
+    /// Consumes the [`Vector`], parses all remaining elements, and returns the [`Parser`] used
     /// to parse each item.
     pub fn into_parser(mut self) -> crate::Parsed<'a, P, E> {
         while crate::values::sequence::Sequence::parse(&mut self)?.is_some() {}
@@ -83,7 +83,7 @@ where
     }
 }
 
-impl<'a, T, E, P> crate::values::Sequence<'a> for VectorIter<'a, T, E, P>
+impl<'a, T, E, P> crate::values::Sequence<'a> for Vector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
@@ -114,7 +114,7 @@ where
     }
 }
 
-impl<'a, T, E, P> Clone for VectorIter<'a, T, E, P>
+impl<'a, T, E, P> Clone for Vector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E> + Clone,
@@ -130,7 +130,7 @@ where
     }
 }
 
-impl<'a, T, E, P> crate::input::AsInput<'a> for VectorIter<'a, T, E, P>
+impl<'a, T, E, P> crate::input::AsInput<'a> for Vector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
@@ -141,7 +141,7 @@ where
     }
 }
 
-impl<'a, T, E, P> Debug for VectorIter<'a, T, E, P>
+impl<'a, T, E, P> Debug for Vector<'a, T, E, P>
 where
     E: ErrorSource<'a> + Debug,
     P: Parser<&'a [u8], T, E> + Clone,

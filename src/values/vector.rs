@@ -4,13 +4,13 @@ use crate::{
 };
 use nom::Parser;
 
-mod bounded_vector_iter;
-mod full_vector_iter;
-mod vector_iter;
+mod bounded_vector;
+mod full_vector;
+mod vector_struct;
 
-pub use bounded_vector_iter::BoundedVectorIter;
-pub use full_vector_iter::FullVectorIter;
-pub use vector_iter::VectorIter;
+pub use bounded_vector::BoundedVector;
+pub use full_vector::FullVector;
+pub use vector_struct::Vector;
 
 /// Describes why a WebAssembly vector could not be parsed.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

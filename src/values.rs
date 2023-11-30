@@ -24,8 +24,7 @@ pub use leb128::{s32 as leb128_s32, s64 as leb128_s64, u32 as leb128_u32, u64 as
 pub use sequence::{Sequence, SequenceIter};
 pub use v128::{V128ShuffleLanes, V128};
 pub use vector::{
-    vector_collect, vector_fold, vector_length, BoundedVectorIter, FullVectorIter, InvalidVector,
-    VectorIter,
+    vector_collect, vector_fold, vector_length, BoundedVector, FullVector, InvalidVector, Vector,
 };
 
 #[cfg(feature = "alloc")]

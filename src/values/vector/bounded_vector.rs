@@ -1,14 +1,14 @@
-use crate::{error::ErrorSource, values::VectorIter};
+use crate::{error::ErrorSource, values::Vector};
 use core::fmt::Debug;
 use nom::{Parser, ToUsize};
 
-/// Wraps a [`VectorIter`] to enforce a minimum number of elements when parsing a vector.
-pub struct BoundedVectorIter<'a, const MIN: u32, T, E, P>
+/// Wraps a [`Vector`] to enforce a minimum number of elements when parsing a vector.
+pub struct BoundedVector<'a, const MIN: u32, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
 {
-    vector: VectorIter<'a, T, E, P>,
+    vector: Vector<'a, T, E, P>,
 }
 
 fn minimum_bounds_error<'a, const MIN: u32, E>(input: &'a [u8], actual: usize) -> E
@@ -25,13 +25,13 @@ where
 }
 
 #[allow(missing_docs)]
-impl<'a, const MIN: u32, T, E, P> BoundedVectorIter<'a, MIN, T, E, P>
+impl<'a, const MIN: u32, T, E, P> BoundedVector<'a, MIN, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
 {
     #[inline]
-    pub fn from_vector_iter(vector: VectorIter<'a, T, E, P>) -> crate::input::Result<Self, E> {
+    pub fn from_vector_iter(vector: Vector<'a, T, E, P>) -> crate::input::Result<Self, E> {
         if vector.expected_len() < MIN.to_usize() {
             Err(nom::Err::Failure(minimum_bounds_error::<'_, MIN, E>(
                 crate::input::AsInput::as_input(&vector),
@@ -46,10 +46,10 @@ where
     ///
     /// # Errors
     ///
-    /// See the documentation for [`VectorIter::with_parsed_length()`] for more information.
+    /// See the documentation for [`Vector::with_parsed_length()`] for more information.
     #[inline]
     pub fn with_parsed_length(input: &'a [u8], parser: P) -> crate::input::Result<Self, E> {
-        let vector = VectorIter::with_parsed_length(input, parser)?;
+        let vector = Vector::with_parsed_length(input, parser)?;
         if vector.expected_len() < MIN.to_usize() {
             Err(nom::Err::Failure(minimum_bounds_error::<'_, MIN, E>(
                 input,
@@ -62,20 +62,19 @@ where
 
     /// Parses all of the remaining items and returns the underlying [`Parser`].
     ///
-    /// See the documentation for [`VectorIter::into_parser()`] for more information.
+    /// See the documentation for [`Vector::into_parser()`] for more information.
     #[inline]
     pub fn into_parser(self) -> crate::Parsed<'a, P, E> {
         self.vector.into_parser()
     }
 
-    /// See [`VectorIter::expected_len()`].
+    /// See [`Vector::expected_len()`].
     pub fn expected_len(&self) -> usize {
         self.vector.expected_len()
     }
 }
 
-impl<'a, const MIN: u32, T, E, P> crate::values::Sequence<'a>
-    for BoundedVectorIter<'a, MIN, T, E, P>
+impl<'a, const MIN: u32, T, E, P> crate::values::Sequence<'a> for BoundedVector<'a, MIN, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
@@ -94,7 +93,7 @@ where
     }
 }
 
-impl<'a, const MIN: u32, T, E, P> Clone for BoundedVectorIter<'a, MIN, T, E, P>
+impl<'a, const MIN: u32, T, E, P> Clone for BoundedVector<'a, MIN, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Clone + Parser<&'a [u8], T, E>,
@@ -107,7 +106,7 @@ where
     }
 }
 
-impl<'a, const MIN: u32, T, E, P> crate::input::AsInput<'a> for BoundedVectorIter<'a, MIN, T, E, P>
+impl<'a, const MIN: u32, T, E, P> crate::input::AsInput<'a> for BoundedVector<'a, MIN, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
@@ -118,7 +117,7 @@ where
     }
 }
 
-impl<'a, const MIN: u32, T, E, P> Debug for BoundedVectorIter<'a, MIN, T, E, P>
+impl<'a, const MIN: u32, T, E, P> Debug for BoundedVector<'a, MIN, T, E, P>
 where
     E: ErrorSource<'a> + Debug,
     P: Parser<&'a [u8], T, E> + Clone,

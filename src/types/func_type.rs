@@ -12,17 +12,17 @@ const FUNC_TYPE_TAG: u8 = 0x60;
 pub struct ResultTypeIter<'a, E: ErrorSource<'a>> {
     types: crate::values::SequenceIter<
         'a,
-        crate::values::VectorIter<'a, crate::types::ValType, E, crate::types::ValTypeParser>,
+        crate::values::Vector<'a, crate::types::ValType, E, crate::types::ValTypeParser>,
     >,
 }
 
 impl<'a, E: ErrorSource<'a>> ResultTypeIter<'a, E> {
     fn new(input: &'a [u8]) -> crate::input::Result<Self, E> {
-        crate::values::VectorIter::with_parsed_length(input, crate::types::ValTypeParser).map(
-            |types| Self {
+        crate::values::Vector::with_parsed_length(input, crate::types::ValTypeParser).map(|types| {
+            Self {
                 types: types.into(),
-            },
-        )
+            }
+        })
     }
 
     #[inline]

@@ -9,7 +9,7 @@ pub use import_desc::ImportDesc;
 /// Iterates over the contents of the [`ImportSec`].
 ///
 /// See the docuemntation for [`ImportSec::iter_contents()`] for more information.
-pub type ImportSecIter<'a, E> = crate::values::FullVectorIter<'a, Import<'a>, E, ImportParser>;
+pub type ImportSecIter<'a, E> = crate::values::FullVector<'a, Import<'a>, E, ImportParser>;
 
 /// Represents the [*import section*].
 ///
@@ -40,7 +40,7 @@ impl<'a> ImportSec<'a> {
     /// Returns an [`Iterator`] over the [`Import`]s within the section.
     #[inline]
     pub fn iter_contents<E: ErrorSource<'a>>(&self) -> ImportSecIter<'a, E> {
-        crate::values::VectorIter::new(self.count, self.imports, ImportParser).into()
+        crate::values::Vector::new(self.count, self.imports, ImportParser).into()
     }
 }
 
