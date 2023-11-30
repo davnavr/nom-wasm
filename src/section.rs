@@ -5,12 +5,7 @@
 //!
 //! [binary encoding for modules]: https://webassembly.github.io/spec/core/binary/modules.html#binary-section
 
-use crate::{
-    error::{AddCause as _, ErrorCause, ErrorKind, ErrorSource},
-    input::Result,
-    Parsed,
-};
-use nom::ToUsize;
+use crate::error::{AddCause as _, ErrorCause, ErrorKind, ErrorSource};
 
 /// Represents a [WebAssembly section], typically a [section within a module].
 ///
@@ -28,7 +23,7 @@ pub struct Section<'a> {
 
 impl<'a> Section<'a> {
     /// Parses a [`Section`] with the given `id` from the given `input`.
-    pub fn parse<E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
+    pub fn parse<E: ErrorSource<'a>>(input: &'a [u8]) -> crate::Parsed<'a, Self, E> {
         let (input, id) = if let Some((id, remaining)) = input.split_first() {
             (remaining, *id)
         } else {
@@ -42,8 +37,9 @@ impl<'a> Section<'a> {
         let (input, length) =
             crate::values::leb128_u32(input).add_cause(ErrorCause::SectionLength)?;
 
-        if let Some(contents) = input.get(..length.to_usize()) {
-            Ok((&input[..length.to_usize()], Self { id, contents }))
+        let length_usize = nom::ToUsize::to_usize(&length);
+        if let Some(contents) = input.get(..length_usize) {
+            Ok((&input[..length_usize], Self { id, contents }))
         } else {
             Err(nom::Err::Failure(E::from_error_kind_and_cause(
                 input,
@@ -63,15 +59,6 @@ impl<'a> Section<'a> {
     pub fn new(id: u8, contents: &'a [u8]) -> Self {
         Self { id, contents }
     }
-
-    /*
-    /// Returns a [`Debug`] implementation that attempts to interpret the contents as a WebAssembly
-    /// module section.
-    #[inline]
-    pub fn debug_module(&self) -> DebugModuleSection<'_, I> {
-        DebugModuleSection::new(self)
-    }
-    */
 }
 
 impl core::fmt::Debug for Section<'_> {
@@ -87,20 +74,29 @@ impl core::fmt::Debug for Section<'_> {
 ///
 /// This is an [`Iterator`] that yields both the remaining input before the [`Section`] was parsed
 /// and the [`Section`] itself.
-#[derive(Default)]
-#[must_use = "call Iterator::next() or .finish()"]
 pub struct Sequence<'a, E: ErrorSource<'a>> {
     input: &'a [u8],
-    _marker: core::marker::PhantomData<dyn nom::Parser<&'a [u8], (), E>>,
+    _marker: core::marker::PhantomData<fn() -> Result<(), E>>,
+}
+
+impl<'a, E: ErrorSource<'a>> Default for Sequence<'a, E> {
+    #[inline]
+    fn default() -> Self {
+        Self::new(&[])
+    }
 }
 
 impl<'a, E: ErrorSource<'a>> Clone for Sequence<'a, E> {
     #[inline]
     fn clone(&self) -> Self {
-        Self {
-            input: self.input,
-            _marker: core::marker::PhantomData,
-        }
+        Self::new(self.input)
+    }
+}
+
+impl<'a, E: ErrorSource<'a>> From<&'a [u8]> for Sequence<'a, E> {
+    #[inline]
+    fn from(input: &'a [u8]) -> Self {
+        Self::new(input)
     }
 }
 
@@ -113,13 +109,6 @@ impl<'a, E: ErrorSource<'a>> Sequence<'a, E> {
             _marker: core::marker::PhantomData,
         }
     }
-
-    /// Parses all of the remaining [`Section`]s.
-    pub fn finish(mut self) -> Result<(), E> {
-        while self.next().transpose()?.is_some() {}
-        debug_assert!(self.input.is_empty());
-        Ok(())
-    }
 }
 
 impl<'a, E: ErrorSource<'a>> crate::input::AsInput<'a> for Sequence<'a, E> {
@@ -129,37 +118,20 @@ impl<'a, E: ErrorSource<'a>> crate::input::AsInput<'a> for Sequence<'a, E> {
     }
 }
 
-impl<'a, E: ErrorSource<'a>> Iterator for Sequence<'a, E> {
-    /// The [`Section`] that was parsed, and the remaining input starting with the [`Section`]
-    /// that was parsed.
-    type Item = Result<(&'a [u8], Section<'a>), E>;
+impl<'a, E: ErrorSource<'a>> crate::values::Sequence<'a> for Sequence<'a, E> {
+    type Item = (&'a [u8], Section<'a>);
+    type Error = E;
 
-    fn next(&mut self) -> Option<Self::Item> {
+    fn parse(&mut self) -> crate::input::Result<Option<Self::Item>, Self::Error> {
         if self.input.is_empty() {
-            None
+            Ok(None)
         } else {
-            let start = self.input;
-            Some(match Section::parse(self.input) {
-                Ok((remaining, section)) => {
-                    self.input = remaining;
-                    Ok((start, section))
-                }
-                Err(err) => {
-                    // Stop parsing early
-                    self.input = &[];
-                    Err(err)
-                }
+            Section::parse(self.input).map(|(remaining, section)| {
+                Some((core::mem::replace(&mut self.input, remaining), section))
             })
         }
     }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (usize::from(!self.input.is_empty()), None)
-    }
 }
-
-impl<'a, E: ErrorSource<'a>> core::iter::FusedIterator for Sequence<'a, E> {}
 
 impl<'a, E: ErrorSource<'a> + core::fmt::Debug> core::fmt::Debug for Sequence<'a, E> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

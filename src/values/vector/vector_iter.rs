@@ -1,14 +1,10 @@
-use crate::{
-    error::{self, ErrorSource},
-    values, Parsed,
-};
+use crate::error::ErrorSource;
 use core::fmt::Debug;
 use nom::Parser;
 
-/// Provides an [`Iterator`] implementation for parsing a [WebAssembly vector].
+/// Parses a [WebAssembly vector]'s elements one at a time.
 ///
 /// [WebAssembly vector]: crate::values::vector_fold()
-#[must_use = "call Iterator::next() or finish()"]
 pub struct VectorIter<'a, T, E, P>
 where
     E: ErrorSource<'a>,
@@ -17,7 +13,7 @@ where
     remaining: usize,
     input: &'a [u8],
     parser: P,
-    _marker: core::marker::PhantomData<fn() -> crate::Parsed<'a, T, E>>,
+    _marker: core::marker::PhantomData<fn() -> Result<T, E>>,
 }
 
 impl<'a, T, E, P> VectorIter<'a, T, E, P>
@@ -41,8 +37,14 @@ where
     ///
     /// [*LEB128* encoded length]: crate::values::vector_length
     pub fn with_parsed_length(input: &'a [u8], parser: P) -> crate::input::Result<Self, E> {
-        let (input, remaining) = values::vector_length(input)?;
+        let (input, remaining) = crate::values::vector_length(input)?;
         Ok(Self::new(remaining, input, parser))
+    }
+
+    /// The expected remaining number of elements that have not yet been parsed.
+    #[inline]
+    pub fn expected_len(&self) -> usize {
+        self.remaining
     }
 
     /// Returns `true` if there are elements that have yet to be parsed.
@@ -51,80 +53,65 @@ where
         self.remaining > 0
     }
 
-    /// Parses all of the remaining elements, returning the remaining `input` and the [`Parser`]
-    /// used to parse the vector's elements.
-    #[inline]
-    pub fn finish(mut self) -> Parsed<'a, P, E> {
-        for result in &mut self {
-            let _ = result?;
-        }
-
+    /// Consumes the [`VectorIter`], parses all remaining elements, and returns the [`Parser`] used
+    /// to parse each item.
+    pub fn into_parser(mut self) -> crate::Parsed<'a, P, E> {
+        while crate::values::sequence::Sequence::parse(&mut self)?.is_some() {}
         Ok((self.input, self.parser))
+    }
+
+    pub(in crate::values::vector) fn ignore_remaining(&mut self) {
+        self.remaining = 0;
+    }
+
+    // #[inline(never)]
+    // #[cold]
+    fn parse_error(&mut self, err: nom::Err<E>) -> nom::Err<E> {
+        self.remaining = 0;
+
+        let expected = core::mem::replace(&mut self.remaining, 0)
+            .try_into()
+            .unwrap_or(u32::MAX);
+
+        err.map(|other| {
+            E::append(self.input, crate::error::ErrorKind::Count, other).with_cause(
+                crate::error::ErrorCause::Vector(crate::values::InvalidVector::Remaining {
+                    expected,
+                }),
+            )
+        })
     }
 }
 
-impl<'a, T, E, P> Iterator for VectorIter<'a, T, E, P>
+impl<'a, T, E, P> crate::values::Sequence<'a> for VectorIter<'a, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
 {
-    type Item = crate::input::Result<T, E>;
+    type Item = T;
+    type Error = E;
 
-    fn next(&mut self) -> Option<Self::Item> {
+    fn parse(&mut self) -> crate::input::Result<Option<T>, E> {
+        // If an error occured, the remaining count is set to 0
         if let Some(next_remaining) = self.remaining.checked_sub(1) {
-            Some(match self.parser.parse(self.input) {
+            match self.parser.parse(self.input) {
                 Ok((input, ok)) => {
                     self.remaining = next_remaining;
                     self.input = input;
-                    Ok(ok)
+                    Ok(Some(ok))
                 }
-                Err(err) => {
-                    let expected = core::mem::replace(&mut self.remaining, 0)
-                        .try_into()
-                        .unwrap_or(u32::MAX);
-
-                    let error = err.map(|other| {
-                        E::append(self.input, error::ErrorKind::Count, other).with_cause(
-                            error::ErrorCause::Vector(values::InvalidVector::Remaining {
-                                expected,
-                            }),
-                        )
-                    });
-
-                    self.remaining = 0;
-                    self.input = &[];
-                    Err(error)
-                }
-            })
+                Err(err) => Err(self.parse_error(err)),
+            }
         } else {
-            None
+            Ok(None)
         }
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (
-            (!self.input.is_empty() || self.remaining > 0) as usize,
-            Some(self.input.len().min(self.remaining)),
-        )
-    }
-}
-
-impl<'a, T, E, P> ExactSizeIterator for VectorIter<'a, T, E, P>
-where
-    E: ErrorSource<'a>,
-    P: Parser<&'a [u8], T, E>,
-{
     #[inline]
-    fn len(&self) -> usize {
-        self.remaining
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        // Lower bound of 0 since an error can occur when the first item is parsed
+        (0, Some(self.remaining))
     }
-}
-
-impl<'a, T, E, P> core::iter::FusedIterator for VectorIter<'a, T, E, P>
-where
-    E: ErrorSource<'a>,
-    P: Parser<&'a [u8], T, E>,
-{
 }
 
 impl<'a, T, E, P> Clone for VectorIter<'a, T, E, P>
@@ -134,7 +121,12 @@ where
 {
     #[inline]
     fn clone(&self) -> Self {
-        Self::new(self.remaining, self.input, self.parser.clone())
+        Self {
+            remaining: self.remaining,
+            input: self.input,
+            parser: self.parser.clone(),
+            _marker: core::marker::PhantomData,
+        }
     }
 }
 
@@ -156,6 +148,6 @@ where
     T: Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        Debug::fmt(&values::SequenceDebug::from(self.clone()), f)
+        Debug::fmt(&crate::values::SequenceDebug::from(self.clone()), f)
     }
 }

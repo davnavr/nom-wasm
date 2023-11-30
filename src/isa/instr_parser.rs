@@ -150,7 +150,7 @@ where
                 .add_cause_with(bad_argument)?;
 
             parser.select_typed(&mut types).to_parsed(start, opcode)?;
-            types.finish().add_cause_with(bad_argument)?.0
+            types.into_parser().add_cause_with(bad_argument)?.0
         }
         Opcode::LocalGet => single_argument!(module::LocalIdx => local_get),
         Opcode::LocalSet => single_argument!(module::LocalIdx => local_set),

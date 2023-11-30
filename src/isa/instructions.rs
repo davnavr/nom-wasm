@@ -542,11 +542,11 @@ where
     }
 
     fn br_table_impl(&mut self, targets: &mut isa::BrTableTargets<'a, E>) -> isa::Result<(), E> {
-        let mut other_targets = Vec::with_capacity_in(targets.len() - 1, self.allocator.clone());
+        let mut other_targets =
+            Vec::with_capacity_in(targets.expected_len() - 1, self.allocator.clone());
         let mut default_target = LabelIdx(0);
-        while let Some(result) = targets.next() {
-            let label = result?;
-            if targets.len() == 0 {
+        while let Some(label) = crate::values::Sequence::parse(targets)? {
+            if targets.expected_len() == 0 {
                 default_target = label;
             } else {
                 other_targets.push(label);
@@ -565,13 +565,12 @@ where
 
     fn select_typed_impl(&mut self, types: &mut isa::SelectTypes<'a, E>) -> isa::Result<(), E> {
         let start = crate::input::AsInput::as_input(types);
-        let result = types
-            .next()
-            .expect("SelectTypes always returns at least 1 type");
-        let operand_type = result?;
+        let operand_type = crate::values::Sequence::parse(types)
+            .transpose()
+            .expect("SelectTypes implementation always returns at least 1 type")?;
 
-        if types.len() > 0 {
-            let arity = u8::try_from(types.len())
+        if types.expected_len() > 0 {
+            let arity = u8::try_from(types.expected_len())
                 .ok()
                 .and_then(|a| a.checked_add(1))
                 .and_then(core::num::NonZeroU8::new)

@@ -22,6 +22,13 @@ impl<'a, A: AsInput<'a>> AsInput<'a> for &A {
     }
 }
 
+impl<'a, A: AsInput<'a>> AsInput<'a> for &mut A {
+    #[inline]
+    fn as_input(&self) -> &'a [u8] {
+        A::as_input(self)
+    }
+}
+
 /// Result type for parser operations that do not explicitly take and return parser input.
 ///
 /// This contrasts with [`Parsed<'a, T>`](crate::Parsed), which returns the remaining parser input

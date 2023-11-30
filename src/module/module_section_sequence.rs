@@ -64,7 +64,8 @@ impl core::fmt::Display for ModuleSectionOrder {
 pub struct UnknownModuleSection<'a> {
     // Non-public fields, since they may be changed (e.g. could get ModuleSection from Section)
     remaining: &'a [u8],
-    section: Section<'a>,
+    section_id: u8,
+    section_contents: &'a [u8],
     known: Option<ModuleSection<'a>>,
     ordering: Ordering<ModuleSectionOrder>,
 }
@@ -97,7 +98,8 @@ impl<'a> UnknownModuleSection<'a> {
 
         Ok(Self {
             remaining,
-            section,
+            section_id: section.id,
+            section_contents: section.contents,
             known,
             ordering: saved_ordering,
         })
@@ -114,7 +116,10 @@ impl<'a> UnknownModuleSection<'a> {
     #[allow(missing_docs)]
     #[inline]
     pub fn section(&self) -> Section<'a> {
-        self.section
+        Section {
+            id: self.section_id,
+            contents: self.section_contents,
+        }
     }
 
     /// Interprets the [`Section`] as a [`ModuleSection`].
@@ -147,7 +152,7 @@ impl core::fmt::Debug for UnknownModuleSection<'_> {
             s.field("section", section)
         } else {
             s = f.debug_struct("Unknown");
-            s.field("section", &self.section)
+            s.field("section", &self.section())
         }
         .field("ordering", &self.ordering)
         .finish()
@@ -160,11 +165,11 @@ impl core::fmt::Debug for UnknownModuleSection<'_> {
 /// correct order according to the [`ModuleSectionOrder`].
 ///
 /// [`preamble`]: crate::module::preamble
-#[must_use = "call Iterator::next() or .finish()"]
+#[derive(Default)]
+#[must_use = "call Iterator::next() or SequenceIter::finish()"]
 pub struct ModuleSectionSequence<'a, E: ErrorSource<'a>> {
     sections: crate::section::Sequence<'a, E>,
     ordering: Ordering<ModuleSectionOrder>,
-    _marker: core::marker::PhantomData<fn() -> E>,
 }
 
 impl<'a, E> From<crate::section::Sequence<'a, E>> for ModuleSectionSequence<'a, E>
@@ -175,7 +180,6 @@ where
         Self {
             sections,
             ordering: Ordering::new(),
-            _marker: core::marker::PhantomData,
         }
     }
 }
@@ -184,6 +188,7 @@ impl<'a, E> From<ModuleSectionSequence<'a, E>> for crate::section::Sequence<'a, 
 where
     E: ErrorSource<'a>,
 {
+    #[inline]
     fn from(module_sections: ModuleSectionSequence<'a, E>) -> Self {
         module_sections.sections
     }
@@ -194,15 +199,7 @@ impl<'a, E: ErrorSource<'a>> Clone for ModuleSectionSequence<'a, E> {
         Self {
             sections: self.sections.clone(),
             ordering: self.ordering.clone(),
-            _marker: core::marker::PhantomData,
         }
-    }
-}
-
-impl<'a, E: ErrorSource<'a>> crate::input::AsInput<'a> for ModuleSectionSequence<'a, E> {
-    #[inline]
-    fn as_input(&self) -> &'a [u8] {
-        crate::input::AsInput::as_input(&self.sections)
     }
 }
 
@@ -219,46 +216,69 @@ impl<'a, E: ErrorSource<'a>> ModuleSectionSequence<'a, E> {
         self.ordering.clone()
     }
 
-    /// Returns an [`Iterator`] that returns an [`Err`] for unknown [`Section`]s.
-    pub fn without_unknown(
-        self,
-    ) -> impl Iterator<Item = Result<(ModuleSection<'a>, Ordering<ModuleSectionOrder>), E>> {
-        self.map(|result| {
-            let section = result?;
-            if let Some(known) = section.to_module_section() {
-                Ok((known, section.ordering()))
-            } else {
-                Err(nom::Err::Failure(E::from_error_kind_and_cause(
-                    section.remaining_input(),
-                    error::ErrorKind::Verify,
-                    error::ErrorCause::InvalidTag(error::InvalidTag::ModuleSectionId(
-                        section.section.id,
-                    )),
-                )))
-            }
-        })
-    }
+    // TODO: Have a MapSequence struct?
+    // /// Returns an [`Iterator`] that returns an [`Err`] for unknown [`Section`]s.
+    // ///
+    // /// An error is yielded if a [`Section`] could not be parsed, if non-custom a
+    // /// [`ModuleSection`]s were not in the correct order, or if a non-custom [`Section`] with
+    // /// an unknown [*id*] was encountered.
+    // pub fn without_unknown(
+    //     self,
+    // ) -> impl Iterator<Item = Result<(ModuleSection<'a>, Ordering<ModuleSectionOrder>), E>> {
+    //     self.map(|result| {
+    //         let section = result?;
+    //         if let Some(known) = section.to_module_section() {
+    //             Ok((known, section.ordering()))
+    //         } else {
+    //             Err(nom::Err::Failure(E::from_error_kind_and_cause(
+    //                 section.remaining_input(),
+    //                 error::ErrorKind::Verify,
+    //                 error::ErrorCause::InvalidTag(error::InvalidTag::ModuleSectionId(
+    //                     section.section.id,
+    //                 )),
+    //             )))
+    //         }
+    //     })
+    // }
+}
 
-    /// Parses all of the remaining sections, consuming all input.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if a [`Section`] could not be parsed, if non-custom [`ModuleSection`]s were not in the
-    /// correct order, or if a non-custom [`Section`] with an unknown [*id*] was encountered.
-    pub fn finish(mut self) -> Result<(), E> {
-        while self.next().transpose()?.is_some() {}
-        Ok(())
+impl<'a, E: ErrorSource<'a>> crate::input::AsInput<'a> for ModuleSectionSequence<'a, E> {
+    #[inline]
+    fn as_input(&self) -> &'a [u8] {
+        crate::input::AsInput::as_input(&self.sections)
     }
 }
 
-impl<'a, E: ErrorSource<'a>> Iterator for ModuleSectionSequence<'a, E> {
-    type Item = Result<UnknownModuleSection<'a>, E>;
+impl<'a, E: ErrorSource<'a>> crate::values::Sequence<'a> for ModuleSectionSequence<'a, E> {
+    type Item = UnknownModuleSection<'a>;
+    type Error = E;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.sections.next().map(|result| {
-            let (remaining, section) = result?;
-            UnknownModuleSection::new(remaining, section, &mut self.ordering)
-        })
+    /// Parses the next [`ModuleSection`] or unknown [`Section`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a [`Section`] could not be parsed, or if non-custom [`ModuleSection`]s
+    /// were not in the correct order.
+    fn parse(&mut self) -> Result<Option<Self::Item>, Self::Error> {
+        // ModuleSectionOrder::from_section_id(known.id())
+
+        // order.check(next).map_err(|e| {
+        //     nom::Err::Failure(E::from_error_kind_and_cause(
+        //         input,
+        //         error::ErrorKind::Verify,
+        //         error::ErrorCause::ModuleSectionOrder(e),
+        //     ))
+        // })?;
+
+        match self.sections.parse() {
+            Ok(None) => Ok(None),
+            Err(err) => Err(err),
+            Ok(Some((remaining, section))) => Ok(Some(UnknownModuleSection::new(
+                remaining,
+                section,
+                &mut self.ordering,
+            )?)),
+        }
     }
 
     #[inline]
@@ -266,8 +286,6 @@ impl<'a, E: ErrorSource<'a>> Iterator for ModuleSectionSequence<'a, E> {
         self.sections.size_hint()
     }
 }
-
-impl<'a, E: ErrorSource<'a>> core::iter::FusedIterator for ModuleSectionSequence<'a, E> {}
 
 impl<'a, E> core::fmt::Debug for ModuleSectionSequence<'a, E>
 where
@@ -302,28 +320,29 @@ where
     G: FnMut(&'a [u8], Section<'a>, Option<ModuleSectionOrder>) -> Result<(), E>,
 {
     // TODO: Make an iterator struct ModuleSectionSequence
-    let mut order = crate::ordering::Ordering::new();
-    crate::section::Sequence::new(input).try_for_each(move |result| {
-        let (input, section) = result?;
-        match ModuleSection::interpret_section(&section) {
-            Ok(result) => {
-                let known = result?;
+    let mut order = crate::ordering::Ordering::<ModuleSectionOrder>::new();
+    // crate::section::Sequence::new(input).try_for_each(move |result| {
+    //     let (input, section) = result?;
+    //     match ModuleSection::interpret_section(&section) {
+    //         Ok(result) => {
+    //             let known = result?;
 
-                if let Some(next) = ModuleSectionOrder::from_section_id(known.id()) {
-                    order.check(next).map_err(|e| {
-                        nom::Err::Failure(E::from_error_kind_and_cause(
-                            input,
-                            error::ErrorKind::Verify,
-                            error::ErrorCause::ModuleSectionOrder(e),
-                        ))
-                    })?;
-                }
+    //             if let Some(next) = ModuleSectionOrder::from_section_id(known.id()) {
+    //                 order.check(next).map_err(|e| {
+    //                     nom::Err::Failure(E::from_error_kind_and_cause(
+    //                         input,
+    //                         error::ErrorKind::Verify,
+    //                         error::ErrorCause::ModuleSectionOrder(e),
+    //                     ))
+    //                 })?;
+    //             }
 
-                f(known, *order.previous())
-            }
-            Err(_) => g(input, section, *order.previous()),
-        }
-    })
+    //             f(known, *order.previous())
+    //         }
+    //         Err(_) => g(input, section, *order.previous()),
+    //     }
+    // })
+    todo!()
 }
 
 fn no_unknown_section<'a, E: ErrorSource<'a>>(

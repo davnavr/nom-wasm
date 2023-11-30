@@ -1,8 +1,4 @@
-use crate::{
-    error::{self, ErrorSource},
-    parser::Parser as _,
-    types::{self, ValTypeParser},
-};
+use crate::{error::ErrorSource, parser::Parser as _};
 use nom::Parser;
 
 const FUNC_TYPE_TAG: u8 = 0x60;
@@ -12,47 +8,42 @@ const FUNC_TYPE_TAG: u8 = 0x60;
 ///
 /// [result type]: https://webassembly.github.io/spec/core/binary/types.html#result-types
 /// [function type]: func_type_with()
+#[derive(Clone)]
 pub struct ResultTypeIter<'a, E: ErrorSource<'a>> {
-    iterator: crate::values::VectorIter<'a, types::ValType, E, ValTypeParser>,
-    result: crate::input::Result<(), E>,
+    types: crate::values::SequenceIter<
+        'a,
+        crate::values::VectorIter<'a, crate::types::ValType, E, crate::types::ValTypeParser>,
+    >,
 }
 
 impl<'a, E: ErrorSource<'a>> ResultTypeIter<'a, E> {
     fn new(input: &'a [u8]) -> crate::input::Result<Self, E> {
-        crate::values::VectorIter::with_parsed_length(input, ValTypeParser).map(|iterator| Self {
-            iterator,
-            result: Ok(()),
-        })
+        crate::values::VectorIter::with_parsed_length(input, crate::types::ValTypeParser).map(
+            |types| Self {
+                types: types.into(),
+            },
+        )
     }
 
+    #[inline]
     fn finish(self) -> crate::Parsed<'a, (), E> {
-        self.result?;
-        self.iterator
+        self.types
             .finish()
-            .map(|(input, ValTypeParser)| (input, ()))
+            .map(|types| (crate::input::AsInput::as_input(&types), ()))
     }
 }
 
 impl<'a, E: ErrorSource<'a>> Iterator for ResultTypeIter<'a, E> {
-    type Item = types::ValType;
+    type Item = crate::types::ValType;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.result.is_ok() {
-            match self.iterator.next()? {
-                Ok(ty) => Some(ty),
-                Err(err) => {
-                    self.result = Err(err);
-                    None
-                }
-            }
-        } else {
-            None
-        }
+        (&mut self.types).next()
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.iterator.size_hint()
+        crate::values::Sequence::size_hint(self.types.sequence())
     }
 }
 
@@ -60,24 +51,10 @@ impl<'a, E: ErrorSource<'a>> core::iter::FusedIterator for ResultTypeIter<'a, E>
 
 impl<'a, E> core::fmt::Debug for ResultTypeIter<'a, E>
 where
-    E: core::fmt::Debug + ErrorSource<'a>,
+    E: core::fmt::Debug + Clone + ErrorSource<'a>,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut list = f.debug_list();
-        if let Err(error) = &self.result {
-            list.entry(error);
-        } else {
-            let mut items = Self {
-                iterator: self.iterator.clone(),
-                result: Ok(()),
-            };
-            list.entries(&mut items);
-            if let Err(error) = items.finish() {
-                list.entry(&error);
-            }
-        }
-
-        list.finish()
+        core::fmt::Debug::fmt(&self.types, f)
     }
 }
 
@@ -96,7 +73,9 @@ where
     R: FnMut(B, &mut ResultTypeIter<'a, E>) -> C,
 {
     let mut func_type_tag = nom::bytes::streaming::tag([FUNC_TYPE_TAG]).with_error_cause(|input| {
-        error::ErrorCause::InvalidTag(error::InvalidTag::FuncType(input.first().copied()))
+        crate::error::ErrorCause::InvalidTag(crate::error::InvalidTag::FuncType(
+            input.first().copied(),
+        ))
     });
 
     move |input| -> crate::Parsed<'a, _, E> {

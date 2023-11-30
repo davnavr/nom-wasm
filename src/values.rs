@@ -8,16 +8,20 @@ use crate::error::{AddCause as _, ErrorCause, ErrorKind, ErrorSource};
 use nom::ToUsize;
 
 mod float;
+mod sequence;
 mod v128;
 mod vector;
 
 pub mod leb128;
+
+pub(crate) use sequence::SequenceDebug;
 
 #[cfg(feature = "alloc")]
 pub(crate) use vector::sequence_fold;
 
 pub use float::{F32, F64};
 pub use leb128::{s32 as leb128_s32, s64 as leb128_s64, u32 as leb128_u32, u64 as leb128_u64};
+pub use sequence::{Sequence, SequenceIter};
 pub use v128::{V128ShuffleLanes, V128};
 pub use vector::{
     vector_collect, vector_fold, vector_length, BoundedVectorIter, FullVectorIter, InvalidVector,
@@ -52,49 +56,5 @@ pub fn name<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> crate::Parsed<'a, &'a st
                 actual: input.len().try_into().unwrap_or(u32::MAX),
             }),
         )))
-    }
-}
-
-/// Provides a [`core::fmt::Debug`] implementation for [`Iterator`]s yielding [`Result`]s.
-pub(crate) struct SequenceDebug<I> {
-    iterator: I,
-}
-
-impl<T, E, I> From<I> for SequenceDebug<I>
-where
-    I: Clone + Iterator<Item = Result<T, E>>,
-    T: core::fmt::Debug,
-    E: core::fmt::Debug,
-{
-    fn from(iterator: I) -> Self {
-        Self { iterator }
-    }
-}
-
-impl<T, E, I> core::fmt::Debug for SequenceDebug<I>
-where
-    I: Clone + Iterator<Item = Result<T, E>>,
-    T: core::fmt::Debug,
-    E: core::fmt::Debug,
-{
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        struct Item<T, E>(Result<T, E>);
-
-        impl<T, E> core::fmt::Debug for Item<T, E>
-        where
-            T: core::fmt::Debug,
-            E: core::fmt::Debug,
-        {
-            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                match &self.0 {
-                    Ok(ok) => core::fmt::Debug::fmt(ok, f),
-                    Err(err) => core::fmt::Debug::fmt(err, f),
-                }
-            }
-        }
-
-        f.debug_list()
-            .entries(self.iterator.clone().map(Item))
-            .finish()
     }
 }
