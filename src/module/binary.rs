@@ -1,9 +1,24 @@
-use crate::{
-    error::ErrorSource,
-    input::Result,
-    module::{self, custom::CustomSection, preamble, ModuleSection, ModuleSectionOrder},
-    section::Section,
-};
+use crate::{error::ErrorSource, input::Result, module};
+
+/// Parses the [WebAssembly module preamble], then returns a [`ModuleSectionSequence`] for parsing
+/// the module's sections.
+///
+/// # Errors
+///
+/// Returns an error if the preamble could not be parsed.
+///
+/// [WebAssembly module preamble]: module::preamble
+/// [`ModuleSectionSequence`]: module::ModuleSectionSequence
+pub fn parse_binary_sections<'a, E>(
+    input: &'a [u8],
+) -> Result<module::ModuleSectionSequence<'a, E>, E>
+where
+    E: ErrorSource<'a>,
+{
+    module::preamble::parse(input).map(|(input, ())| module::ModuleSectionSequence::new(input))
+}
+
+//pub fn parse_binary_with_unknown(init: I, f: F) -> impl nom::Parser
 
 /// Represents a module in the [WebAssembly binary format].
 ///
@@ -17,92 +32,132 @@ pub struct Module<'a> {
 }
 
 impl<'a> Module<'a> {
-    fn parse_module_section<'b, E, F>(
-        module: &'b mut Self,
-        mut custom_f: F,
-    ) -> impl (FnMut(ModuleSection<'a>, Option<ModuleSectionOrder>) -> Result<(), E>) + 'b
-    where
-        E: ErrorSource<'a>,
-        F: (FnMut(CustomSection<'a>, Option<ModuleSectionOrder>) -> Result<(), E>) + 'b,
-    {
-        move |section, order| {
-            match section {
-                ModuleSection::Custom(custom_sec) => custom_f(custom_sec, order)?,
-                ModuleSection::Type(type_sec) => module.type_sec = type_sec,
-                ModuleSection::Import(import_sec) => module.import_sec = import_sec,
-            }
-
-            Ok(())
-        }
-    }
-
-    /// Parses a module from its encoding in the WebAssembly binary format, using the given
-    /// closures to handle custom and unrecognized sections.
+    /// Creates a [`Module`] from its `sections`, while also passing *each* section to the given closure.
     ///
-    /// See the documentation for the [`module_section_sequence_with_unknown()`] method for more
-    /// information.
+    /// Custom sections can be processed by the closure by calling the
+    /// [`UnknownModuleSection::to_custom_section()`] method.
+    ///
+    /// If special handling of unknown sections is not needed, use the
+    /// [`Module::from_sections_with`] method instead.
+    ///
+    /// If no special processing of sections is needed, use the [`Module::from_sections`] method instead.
     ///
     /// # Errors
     ///
-    /// Returns an error if the `binary` does not begin with the WebAssembly [**`magic`**], or if a
-    /// section could not be fully parsed.
+    /// Returns an error if a [`Section`] could not be parsed, or any errors from the closure.
     ///
-    /// [`module_section_sequence_with_unknown()`]: module::module_section_sequence_with_unknown
-    /// [**`magic`**]: preamble::MAGIC
-    pub fn parse_with_custom_and_unknown_sections<E, C, U>(
-        binary: &'a [u8],
-        custom: C,
-        unknown: U,
+    /// [`UnknownModuleSection::to_custom_section()`]: module::UnknownModuleSection::to_custom_section()
+    /// [`Section`]: crate::section::Section
+    pub fn from_sections_with_unknown<E, F>(
+        mut sections: module::ModuleSectionSequence<'a, E>,
+        mut f: F,
     ) -> Result<Self, E>
     where
         E: ErrorSource<'a>,
-        C: FnMut(CustomSection<'a>, Option<ModuleSectionOrder>) -> Result<(), E>,
-        U: FnMut(&'a [u8], Section<'a>, Option<ModuleSectionOrder>) -> Result<(), E>,
+        F: FnMut(module::UnknownModuleSection<'a>) -> Result<(), E>,
     {
-        let (input, ()) = preamble::parse(binary)?;
         let mut module = Self::default();
-        module::module_section_sequence_with_unknown(
-            input,
-            Self::parse_module_section(&mut module, custom),
-            unknown,
-        )?;
+
+        while let Some(sec) = crate::values::Sequence::parse(&mut sections)? {
+            if let Ok(module_section) = sec.to_module_section::<()>() {
+                use module::ModuleSection;
+
+                match module_section.clone() {
+                    ModuleSection::Custom(_) => (),
+                    ModuleSection::Type(type_sec) => module.type_sec = type_sec,
+                    ModuleSection::Import(import_sec) => module.import_sec = import_sec,
+                }
+            }
+
+            f(sec)?;
+        }
+
         Ok(module)
     }
 
-    /// Parses a module from its encoding in the WebAssembly binary format, passing custom
-    /// sections into the given closures.
+    /// Creates a [`Module`] from its `sections`, while also passing *each* [`ModuleSection`] to the given closure.
+    ///
+    /// To also process unknown sections, use the [`Module::from_sections_with_unknown`] method instead.
+    ///
+    /// If special processing is only needed for custom sections, use the [`Module::from_sections_with_custom`] method instead.
+    ///
+    /// If no special processing of sections is needed, use the [`Module::from_sections`] method instead.
     ///
     /// # Errors
     ///
-    /// Returns an error if a section could not be parsed, or if an unrecognized [`Section`] was
+    /// Returns an error if a [`ModuleSection`] could not be parsed, or if an unknown section was
     /// encountered.
     ///
-    /// To handle unrecognized sections, use the
-    /// [`Module::parse_with_custom_and_unknown_sections()`] method instead.
-    pub fn parse_with_custom_sections<E, C>(binary: &'a [u8], custom: C) -> Result<Self, E>
+    /// [`ModuleSection`]: module::ModuleSection
+    pub fn from_sections_with<E, F>(
+        sections: module::ModuleSectionSequence<'a, E>,
+        mut f: F,
+    ) -> Result<Self, E>
     where
         E: ErrorSource<'a>,
-        C: FnMut(CustomSection<'a>, Option<ModuleSectionOrder>) -> Result<(), E>,
+        F: FnMut(module::ModuleSection<'a>) -> Result<(), E>,
     {
-        let (input, ()) = preamble::parse(binary)?;
-        let mut module = Self::default();
-        module::module_section_sequence(input, Self::parse_module_section(&mut module, custom))?;
-        Ok(module)
+        Self::from_sections_with_unknown(sections, move |sec| {
+            sec.to_module_section().cloned().and_then(&mut f)
+        })
     }
 
-    /// Parses a module from its encoding in the WebAssembly binary format, ignoring custom sections.
+    /// Creates a [`Module`] from its `sections`, passing *each* encountered [`CustomSection`] to the given closure.
     ///
-    /// To process custom sections, use the [`Module::parse_with_custom_sections()`] method
-    /// instead.
-    pub fn parse<E: ErrorSource<'a>>(binary: &'a [u8]) -> Result<Self, E> {
-        #[inline]
-        fn skip_custom_section<E>(
-            _: CustomSection<'_>,
-            _: Option<ModuleSectionOrder>,
-        ) -> Result<(), E> {
-            Ok(())
-        }
+    /// To also process unknown sections, use the [`Module::from_sections_with_unknown`] method instead.
+    ///
+    /// If additional processing of non-custom [`ModuleSection`]s is needed, use the
+    /// [`Module::from_sections_with`] method instead.
+    ///
+    /// If no special processing of sections is needed, use the [`Module::from_sections`] method instead.
+    ///
+    /// # Errors
+    ///
+    /// See the documentation for the [`Module::from_sections_with`] method for more information.
+    ///
+    /// [`CustomSection`]: module::custom::CustomSection
+    /// [`ModuleSection`]: module::ModuleSection
+    pub fn from_sections_with_custom<E, F>(
+        sections: module::ModuleSectionSequence<'a, E>,
+        mut f: F,
+    ) -> Result<Self, E>
+    where
+        E: ErrorSource<'a>,
+        F: FnMut(module::custom::CustomSection<'a>) -> Result<(), E>,
+    {
+        Self::from_sections_with(sections, move |sec| {
+            if let module::ModuleSection::Custom(custom) = sec {
+                f(custom)
+            } else {
+                Ok(())
+            }
+        })
+    }
 
-        Self::parse_with_custom_sections(binary, skip_custom_section)
+    /// Creates a [`Module`] from its `sections`, skipping all [`CustomSection`]s.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a [`ModuleSection`] could not be parsed, or if an unknown section was
+    /// encountered.
+    ///
+    /// [`CustomSection`]: module::custom::CustomSection
+    /// [`ModuleSection`]: module::ModuleSection
+    #[inline]
+    pub fn from_sections<E>(sections: module::ModuleSectionSequence<'a, E>) -> Result<Self, E>
+    where
+        E: ErrorSource<'a>,
+    {
+        Self::from_sections_with_custom(sections, |_| Ok(()))
+    }
+
+    /// Parses a module from its encoding in the WebAssembly `binary` format, skipping custom sections.
+    ///
+    /// # Errors
+    ///
+    /// See the documentation for the [`Module::from_sections`] method for more information.
+    #[inline]
+    pub fn parse<E: ErrorSource<'a>>(binary: &'a [u8]) -> Result<Self, E> {
+        parse_binary_sections(binary).and_then(Self::from_sections)
     }
 }

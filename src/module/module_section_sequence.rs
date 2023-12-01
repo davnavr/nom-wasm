@@ -64,6 +64,7 @@ impl core::fmt::Display for ModuleSectionOrder {
 pub struct UnknownModuleSection<'a> {
     // Non-public fields, since they may be changed (e.g. could get ModuleSection from Section)
     remaining: &'a [u8],
+    // `Section` fields are split to reduce size of struct
     section_id: u8,
     section_contents: &'a [u8],
     known: Option<ModuleSection<'a>>,
@@ -124,14 +125,34 @@ impl<'a> UnknownModuleSection<'a> {
 
     /// Interprets the [`Section`] as a [`ModuleSection`].
     ///
-    /// Returns `None` if the section was neither a known module section or a [`Custom`] section.
-    ///
     /// See the documentation for [`ModuleSection::interpret_section()`] for more information.
     ///
+    /// # Errors
+    ///
+    /// Returns an error if the section was neither a known module section or a [`Custom`] section.
+    ///
     /// [`Custom`]: ModuleSection::Custom
+    pub fn to_module_section<E: ErrorSource<'a>>(&self) -> Result<&ModuleSection<'a>, E> {
+        self.known.as_ref().ok_or_else(|| {
+            nom::Err::Failure(E::from_error_kind_and_cause(
+                self.remaining,
+                error::ErrorKind::Verify,
+                error::ErrorCause::InvalidTag(error::InvalidTag::ModuleSectionId(self.section_id)),
+            ))
+        })
+    }
+
+    /// Gets the [`CustomSection`], or [`None`] if the section was a different [`ModuleSection`]
+    /// or was an unrecognized section.
+    ///
+    /// [`CustomSection`]: crate::module::custom::CustomSection
     #[inline]
-    pub fn to_module_section(&self) -> Option<ModuleSection<'a>> {
-        self.known.clone()
+    pub fn to_custom_section(&self) -> Option<&crate::module::custom::CustomSection<'a>> {
+        if let Some(ModuleSection::Custom(custom)) = &self.known {
+            Some(custom)
+        } else {
+            None
+        }
     }
 
     /// The current [`ModuleSectionOrder`] when this module section was parsed.
@@ -166,7 +187,6 @@ impl core::fmt::Debug for UnknownModuleSection<'_> {
 ///
 /// [`preamble`]: crate::module::preamble
 #[derive(Default)]
-#[must_use = "call Iterator::next() or SequenceIter::finish()"]
 pub struct ModuleSectionSequence<'a, E: ErrorSource<'a>> {
     sections: crate::section::Sequence<'a, E>,
     ordering: Ordering<ModuleSectionOrder>,
@@ -194,6 +214,13 @@ where
     }
 }
 
+impl<'a, E: ErrorSource<'a>> From<&'a [u8]> for ModuleSectionSequence<'a, E> {
+    #[inline]
+    fn from(input: &'a [u8]) -> Self {
+        crate::section::Sequence::new(input).into()
+    }
+}
+
 impl<'a, E: ErrorSource<'a>> Clone for ModuleSectionSequence<'a, E> {
     fn clone(&self) -> Self {
         Self {
@@ -207,7 +234,7 @@ impl<'a, E: ErrorSource<'a>> ModuleSectionSequence<'a, E> {
     /// Creates a [`ModuleSectionSequence`] from the sections contained within the given `input`.
     #[inline]
     pub fn new(input: &'a [u8]) -> Self {
-        crate::section::Sequence::new(input).into()
+        input.into()
     }
 
     /// Gets the current ordering of [`ModuleSection`]s.
@@ -260,16 +287,6 @@ impl<'a, E: ErrorSource<'a>> crate::values::Sequence<'a> for ModuleSectionSequen
     /// Returns an error if a [`Section`] could not be parsed, or if non-custom [`ModuleSection`]s
     /// were not in the correct order.
     fn parse(&mut self) -> Result<Option<Self::Item>, Self::Error> {
-        // ModuleSectionOrder::from_section_id(known.id())
-
-        // order.check(next).map_err(|e| {
-        //     nom::Err::Failure(E::from_error_kind_and_cause(
-        //         input,
-        //         error::ErrorKind::Verify,
-        //         error::ErrorCause::ModuleSectionOrder(e),
-        //     ))
-        // })?;
-
         match self.sections.parse() {
             Ok(None) => Ok(None),
             Err(err) => Err(err),
@@ -294,84 +311,4 @@ where
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&crate::values::SequenceDebug::from(self.clone()), f)
     }
-}
-
-/// Parses the sequence of [`ModuleSection`]s after the [`preamble`] within a WebAssembly module,
-/// with custom handling for unknown sections.
-///
-/// Each [`ModuleSection`] is passed into the `f` closure, and each unknown non-custom [`Section`]
-/// into the `g` closure.
-///
-/// # Errors
-///
-/// Returns an error if a section could not be parsed, or if non-custom sections were not in the
-/// correct order.
-///
-/// [`preamble`]: crate::module::preamble
-#[deprecated(note = "use ModuleSectionSequence")]
-pub fn module_section_sequence_with_unknown<'a, E, F, G>(
-    input: &'a [u8],
-    mut f: F,
-    mut g: G,
-) -> Result<(), E>
-where
-    E: ErrorSource<'a>,
-    F: FnMut(ModuleSection<'a>, Option<ModuleSectionOrder>) -> Result<(), E>,
-    G: FnMut(&'a [u8], Section<'a>, Option<ModuleSectionOrder>) -> Result<(), E>,
-{
-    // TODO: Make an iterator struct ModuleSectionSequence
-    let mut order = crate::ordering::Ordering::<ModuleSectionOrder>::new();
-    // crate::section::Sequence::new(input).try_for_each(move |result| {
-    //     let (input, section) = result?;
-    //     match ModuleSection::interpret_section(&section) {
-    //         Ok(result) => {
-    //             let known = result?;
-
-    //             if let Some(next) = ModuleSectionOrder::from_section_id(known.id()) {
-    //                 order.check(next).map_err(|e| {
-    //                     nom::Err::Failure(E::from_error_kind_and_cause(
-    //                         input,
-    //                         error::ErrorKind::Verify,
-    //                         error::ErrorCause::ModuleSectionOrder(e),
-    //                     ))
-    //                 })?;
-    //             }
-
-    //             f(known, *order.previous())
-    //         }
-    //         Err(_) => g(input, section, *order.previous()),
-    //     }
-    // })
-    todo!()
-}
-
-fn no_unknown_section<'a, E: ErrorSource<'a>>(
-    input: &'a [u8],
-    section: Section<'a>,
-    _: Option<ModuleSectionOrder>,
-) -> Result<(), E> {
-    Err(nom::Err::Failure(E::from_error_kind_and_cause(
-        input,
-        error::ErrorKind::Verify,
-        error::ErrorCause::InvalidTag(error::InvalidTag::ModuleSectionId(section.id)),
-    )))
-}
-
-/// Parses the sequence of [`ModuleSection`]s after the [`preamble`] within a WebAssembly module.
-///
-/// To handle unknown non-custom [`Section`]s, use [`module_section_sequence_with_unknown()`] instead.
-///
-/// # Errors
-///
-/// Returns an error if a section could not be parsed, if non-custom sections were not in the
-/// correct order, or if a non-custom [`Section`] with an unknown [*id*] was encountered.
-///
-/// [`preamble`]: crate::module::preamble
-/// [*id*]: Section::id
-pub fn module_section_sequence<'a, E, F>(input: &'a [u8], f: F) -> Result<(), E>
-where
-    E: ErrorSource<'a>,
-    F: FnMut(ModuleSection<'a>, Option<ModuleSectionOrder>) -> Result<(), E>,
-{
-    module_section_sequence_with_unknown(input, f, no_unknown_section::<'a, E>)
 }
