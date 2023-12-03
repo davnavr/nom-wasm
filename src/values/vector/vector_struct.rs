@@ -16,6 +16,20 @@ where
     _marker: core::marker::PhantomData<fn() -> Result<T, E>>,
 }
 
+/// Calls [`Vector::with_parsed_length`] with the [`Default`] value used for the [`Parser`].
+impl<'a, T, E, P> TryFrom<&'a [u8]> for Vector<'a, T, E, P>
+where
+    E: ErrorSource<'a>,
+    P: Parser<&'a [u8], T, E> + Default,
+{
+    type Error = nom::Err<E>;
+
+    #[inline]
+    fn try_from(input: &'a [u8]) -> Result<Self, Self::Error> {
+        Self::with_parsed_length(input, P::default())
+    }
+}
+
 impl<'a, T, E, P> Vector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
@@ -82,28 +96,26 @@ where
         })
     }
 }
-
-impl<'a, T, E, P> crate::values::Sequence<'a> for Vector<'a, T, E, P>
+impl<'a, T, E, P> Iterator for Vector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
 {
-    type Item = T;
-    type Error = E;
+    type Item = crate::input::Result<T, E>;
 
-    fn parse(&mut self) -> crate::input::Result<Option<T>, E> {
+    fn next(&mut self) -> Option<Self::Item> {
         // If an error occured, the remaining count is set to 0
         if let Some(next_remaining) = self.remaining.checked_sub(1) {
             match self.parser.parse(self.input) {
                 Ok((input, ok)) => {
                     self.remaining = next_remaining;
                     self.input = input;
-                    Ok(Some(ok))
+                    Some(Ok(ok))
                 }
-                Err(err) => Err(self.parse_error(err)),
+                Err(err) => Some(Err(self.parse_error(err))),
             }
         } else {
-            Ok(None)
+            None
         }
     }
 

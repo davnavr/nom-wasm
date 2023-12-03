@@ -57,13 +57,12 @@ impl<'a, E: ErrorSource<'a>> crate::input::AsInput<'a> for BrTableTargets<'a, E>
     }
 }
 
-impl<'a, E: ErrorSource<'a>> crate::values::Sequence<'a> for BrTableTargets<'a, E> {
-    type Item = crate::isa::LabelIdx;
-    type Error = E;
+impl<'a, E: ErrorSource<'a>> Iterator for BrTableTargets<'a, E> {
+    type Item = crate::input::Result<crate::isa::LabelIdx, E>;
 
     #[inline]
-    fn parse(&mut self) -> crate::input::Result<Option<Self::Item>, Self::Error> {
-        crate::values::Sequence::parse(&mut self.targets)
+    fn next(&mut self) -> Option<Self::Item> {
+        self.targets.next()
     }
 
     #[inline]

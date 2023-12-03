@@ -70,22 +70,20 @@ where
         crate::input::AsInput::as_input(&self.vector)
     }
 }
-
-impl<'a, T, E, P> crate::values::Sequence<'a> for FullVector<'a, T, E, P>
+impl<'a, T, E, P> Iterator for FullVector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
 {
-    type Item = T;
-    type Error = E;
+    type Item = crate::input::Result<T, E>;
 
-    fn parse(&mut self) -> crate::input::Result<Option<Self::Item>, Self::Error> {
+    fn next(&mut self) -> Option<Self::Item> {
         let remaining_input = crate::input::AsInput::as_input(&self);
         if !self.vector.has_remaining() && !remaining_input.is_empty() {
             self.vector.ignore_remaining();
-            Err(expected_eof(remaining_input))
+            Some(Err(expected_eof(remaining_input)))
         } else {
-            crate::values::Sequence::parse(&mut self.vector)
+            self.vector.next()
         }
     }
 

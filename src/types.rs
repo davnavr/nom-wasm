@@ -14,7 +14,7 @@ mod alloc_func_type;
 pub use alloc_func_type::{FuncType, FuncTypeParser};
 
 pub use crate::module::TypeIdx;
-pub use func_type::{func_type_with, ResultTypeIter};
+pub use func_type::{func_type_with, ResultType};
 pub use global_type::{GlobalType, Mutability};
 pub use limits::{IdxType, LimitBounds, Limits, Sharing};
 pub use type_parsers::ValTypeParser;

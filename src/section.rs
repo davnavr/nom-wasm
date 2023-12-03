@@ -118,17 +118,16 @@ impl<'a, E: ErrorSource<'a>> crate::input::AsInput<'a> for Sequence<'a, E> {
     }
 }
 
-impl<'a, E: ErrorSource<'a>> crate::values::Sequence<'a> for Sequence<'a, E> {
-    type Item = (&'a [u8], Section<'a>);
-    type Error = E;
+impl<'a, E: ErrorSource<'a>> Iterator for Sequence<'a, E> {
+    type Item = crate::input::Result<(&'a [u8], Section<'a>), E>;
 
-    fn parse(&mut self) -> crate::input::Result<Option<Self::Item>, Self::Error> {
+    fn next(&mut self) -> Option<Self::Item> {
         if self.input.is_empty() {
-            Ok(None)
+            None
         } else {
-            Section::parse(self.input).map(|(remaining, section)| {
-                Some((core::mem::replace(&mut self.input, remaining), section))
-            })
+            Some(Section::parse(self.input).map(|(remaining, section)| {
+                (core::mem::replace(&mut self.input, remaining), section)
+            }))
         }
     }
 }

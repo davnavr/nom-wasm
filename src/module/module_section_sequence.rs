@@ -276,26 +276,13 @@ impl<'a, E: ErrorSource<'a>> crate::input::AsInput<'a> for ModuleSectionSequence
     }
 }
 
-impl<'a, E: ErrorSource<'a>> crate::values::Sequence<'a> for ModuleSectionSequence<'a, E> {
-    type Item = UnknownModuleSection<'a>;
-    type Error = E;
+impl<'a, E: ErrorSource<'a>> Iterator for ModuleSectionSequence<'a, E> {
+    type Item = crate::input::Result<UnknownModuleSection<'a>, E>;
 
-    /// Parses the next [`ModuleSection`] or unknown [`Section`].
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if a [`Section`] could not be parsed, or if non-custom [`ModuleSection`]s
-    /// were not in the correct order.
-    fn parse(&mut self) -> Result<Option<Self::Item>, Self::Error> {
-        match self.sections.parse() {
-            Ok(None) => Ok(None),
-            Err(err) => Err(err),
-            Ok(Some((remaining, section))) => Ok(Some(UnknownModuleSection::new(
-                remaining,
-                section,
-                &mut self.ordering,
-            )?)),
-        }
+    fn next(&mut self) -> Option<Self::Item> {
+        Some(self.sections.next()?.and_then(|(remaining, section)| {
+            UnknownModuleSection::new(remaining, section, &mut self.ordering)
+        }))
     }
 
     #[inline]

@@ -1,13 +1,14 @@
-//! Contains traits, types, and functions for parsing sequences of items.
+//! Contains traits and types for parsing sequences of items.
 
 use crate::input::Result;
 use core::fmt::Debug;
 
 /// Trait for parsing sequences of items.
-#[must_use = "sequences are lazy and do not parse all items immediately"]
-pub trait Sequence<'a>: crate::input::AsInput<'a> {
+pub trait Sequence<'a>:
+    crate::input::AsInput<'a> + Iterator<Item = Result<Self::Output, Self::Error>>
+{
     /// The type returned when an items is successfully parsed.
-    type Item;
+    type Output;
 
     /// The type returned when an item could not be parsed.
     type Error: crate::error::ErrorSource<'a>;
@@ -19,61 +20,28 @@ pub trait Sequence<'a>: crate::input::AsInput<'a> {
     /// # Errors
     ///
     /// Returns an error if an item could not be parsed.
-    fn parse(&mut self) -> Result<Option<Self::Item>, Self::Error>;
-
-    /// Returns an estimate of the remaining number of items in the sequence that have yet to be
-    /// parsed.
-    ///
-    /// See the documentation for [`Iterator::size_hint()`].
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (0, None)
-    }
-
-    /// Attempts to collect all of the remaining items into a [`Vec`].
-    ///
-    /// # Errors
-    ///
-    /// If an item could not be parsed, returns the corresponding error.
-    ///
-    /// [`Vec`]: alloc::vec::Vec
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "alloc")))]
-    #[cfg(feature = "alloc")]
-    fn into_vec(mut self) -> Result<alloc::vec::Vec<Self::Item>, Self::Error>
-    where
-        Self: Sized,
-    {
-        let mut v = alloc::vec::Vec::new();
-        match self.size_hint() {
-            (_, Some(upper)) => v.reserve_exact(upper),
-            (lower, None) => v.reserve(lower),
-        }
-
-        while let Some(item) = self.parse()? {
-            v.push(item);
-        }
-
-        Ok(v)
+    #[inline]
+    fn parse(&mut self) -> Result<Option<Self::Output>, Self::Error> {
+        self.next().transpose()
     }
 }
 
-crate::static_assert::object_safe!(Sequence<'static, Item = (), Error = ()>);
-
-impl<'a, S: Sequence<'a>> Sequence<'a> for &mut S {
-    type Item = S::Item;
-    type Error = S::Error;
-
-    #[inline]
-    fn parse(&mut self) -> Result<Option<S::Item>, S::Error> {
-        S::parse(self)
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        S::size_hint(self)
-    }
+impl<'a, T, E, S> Sequence<'a> for S
+where
+    E: crate::error::ErrorSource<'a>,
+    S: crate::input::AsInput<'a> + Iterator<Item = Result<T, E>>,
+{
+    type Output = T;
+    type Error = E;
 }
 
-/// Provides an [`Iterator`] implementation for a [`Sequence`].
+/// An [`Iterator`] for parsing a [`Sequence`] of items.
+///
+/// Rather than yielding [`Result`]s, this [`Iterator`] yields `Some` for each `Ok`, then `None` if
+/// the end of the [`Sequence`] is reached or when an error occurs.
+///
+/// Any error that occurs can then be obtained by calling [`SequenceIter::error()`] or
+/// [`SequenceIter::finish()`].
 #[derive(Clone)]
 pub struct SequenceIter<'a, S: Sequence<'a>> {
     sequence: S,
@@ -104,22 +72,40 @@ impl<'a, S: Sequence<'a>> SequenceIter<'a, S> {
         self.error.as_ref().err()
     }
 
-    /// Gets a reference to the underlying [`Sequence`].
-    #[inline]
-    pub(crate) fn sequence(&self) -> &S {
-        &self.sequence
-    }
-
     /// Finishes parsing all of the remaining items, returning any error that occured.
     pub fn finish(mut self) -> Result<S, S::Error> {
         for _ in &mut self {}
         self.error.map(move |()| self.sequence)
     }
 
+    /// Attempts to collect all of the remaining items into a [`Vec`].
+    ///
+    /// # Errors
+    ///
+    /// If an item could not be parsed, returns the corresponding error.
+    ///
+    /// [`Vec`]: alloc::vec::Vec
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "alloc")))]
+    #[cfg(feature = "alloc")]
+    pub fn into_vec(self) -> Result<alloc::vec::Vec<S::Output>, S::Error> {
+        self.error?;
+        let mut sequence = self.sequence;
+        let mut v = alloc::vec::Vec::new();
+        match sequence.size_hint() {
+            (_, Some(upper)) => v.reserve_exact(upper),
+            (lower, None) => v.reserve(lower),
+        }
+
+        while let Some(item) = sequence.parse()? {
+            v.push(item);
+        }
+
+        Ok(v)
+    }
+
     fn debug_fmt(mut self, f: &mut core::fmt::Formatter) -> core::fmt::Result
     where
-        S: Clone,
-        S::Item: Debug,
+        S::Output: Debug,
         S::Error: Debug,
     {
         let mut list = f.debug_list();
@@ -133,12 +119,19 @@ impl<'a, S: Sequence<'a>> SequenceIter<'a, S> {
     }
 }
 
-impl<'a, S: Sequence<'a>> Iterator for &mut SequenceIter<'a, S> {
-    type Item = S::Item;
+impl<'a, S: Sequence<'a>> crate::input::AsInput<'a> for SequenceIter<'a, S> {
+    #[inline]
+    fn as_input(&self) -> &'a [u8] {
+        self.sequence.as_input()
+    }
+}
 
-    fn next(&mut self) -> Option<S::Item> {
+impl<'a, S: Sequence<'a>> Iterator for &mut SequenceIter<'a, S> {
+    type Item = S::Output;
+
+    fn next(&mut self) -> Option<S::Output> {
         if self.error.is_ok() {
-            match self.sequence.parse().transpose()? {
+            match self.sequence.next()? {
                 Ok(item) => Some(item),
                 Err(err) => {
                     self.error = Err(err);
@@ -152,7 +145,7 @@ impl<'a, S: Sequence<'a>> Iterator for &mut SequenceIter<'a, S> {
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        S::size_hint(&self.sequence)
+        self.sequence.size_hint()
     }
 }
 
@@ -161,7 +154,7 @@ impl<'a, S: Sequence<'a>> core::iter::FusedIterator for &mut SequenceIter<'a, S>
 impl<'a, S: Sequence<'a>> Debug for SequenceIter<'a, S>
 where
     S: Clone,
-    S::Item: Debug,
+    S::Output: Debug,
     S::Error: Clone + Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -170,7 +163,7 @@ where
 }
 
 /// Provides a [`Debug`] implementation for [`Sequence`]s.
-pub(crate) struct SequenceDebug<'a, S> {
+pub(crate) struct SequenceDebug<'a, S: Sequence<'a>> {
     sequence: S,
     _marker: core::marker::PhantomData<&'a [u8]>,
 }
@@ -178,7 +171,7 @@ pub(crate) struct SequenceDebug<'a, S> {
 impl<'a, S> From<S> for SequenceDebug<'a, S>
 where
     S: Clone + Sequence<'a>,
-    S::Item: Debug,
+    S::Output: Debug,
     S::Error: Debug,
 {
     #[inline]
@@ -193,7 +186,7 @@ where
 impl<'a, S> Debug for SequenceDebug<'a, S>
 where
     S: Clone + Sequence<'a>,
-    S::Item: Debug,
+    S::Output: Debug,
     S::Error: Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

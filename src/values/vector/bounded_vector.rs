@@ -74,17 +74,16 @@ where
     }
 }
 
-impl<'a, const MIN: u32, T, E, P> crate::values::Sequence<'a> for BoundedVector<'a, MIN, T, E, P>
+impl<'a, const MIN: u32, T, E, P> Iterator for BoundedVector<'a, MIN, T, E, P>
 where
     E: ErrorSource<'a>,
     P: Parser<&'a [u8], T, E>,
 {
-    type Item = T;
-    type Error = E;
+    type Item = crate::input::Result<T, E>;
 
     #[inline]
-    fn parse(&mut self) -> crate::input::Result<Option<T>, E> {
-        self.vector.parse()
+    fn next(&mut self) -> Option<Self::Item> {
+        self.vector.next()
     }
 
     #[inline]

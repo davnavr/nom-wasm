@@ -16,7 +16,7 @@ pub use binary::{parse_binary_sections, Module};
 pub use core_indices::{
     DataIdx, ElemIdx, FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemIdx, TableIdx, TagIdx, TypeIdx,
 };
-pub use import_sec::{Import, ImportDesc, ImportParser, ImportSec, ImportSecIter};
+pub use import_sec::{Import, ImportDesc, ImportParser, ImportSec, ImportSecContents};
 pub use module_section::{ModuleSection, ModuleSectionId};
 pub use module_section_sequence::{
     ModuleSectionOrder, ModuleSectionSequence, UnknownModuleSection,

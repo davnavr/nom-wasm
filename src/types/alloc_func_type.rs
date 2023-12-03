@@ -71,13 +71,17 @@ impl<'a, E: ErrorSource<'a>> nom::Parser<&'a [u8], FuncType, E> for FuncTypePars
             || buffer.borrow_mut(),
             |mut buf, param_types| {
                 debug_assert!(buf.is_empty());
-                buf.extend(param_types);
+                let mut param_types = crate::values::SequenceIter::from(param_types);
+                buf.extend(&mut param_types);
+                let _ = param_types.finish()?;
                 let param_count = u32::try_from(buf.len()).unwrap_or(u32::MAX);
-                (buf, param_count)
+                Ok((buf, param_count))
             },
             |(mut buf, param_count), result_types| {
-                buf.extend(result_types);
-                FuncType::from_vec(&mut buf, param_count)
+                let mut result_types = crate::values::SequenceIter::from(result_types);
+                buf.extend(&mut result_types);
+                let _ = result_types.finish()?;
+                Ok(FuncType::from_vec(&mut buf, param_count))
             },
         )
         .parse(input);
