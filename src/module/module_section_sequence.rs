@@ -243,30 +243,33 @@ impl<'a, E: ErrorSource<'a>> ModuleSectionSequence<'a, E> {
         self.ordering.clone()
     }
 
-    // TODO: Have a MapSequence struct?
-    // /// Returns an [`Iterator`] that returns an [`Err`] for unknown [`Section`]s.
-    // ///
-    // /// An error is yielded if a [`Section`] could not be parsed, if non-custom a
-    // /// [`ModuleSection`]s were not in the correct order, or if a non-custom [`Section`] with
-    // /// an unknown [*id*] was encountered.
-    // pub fn without_unknown(
-    //     self,
-    // ) -> impl Iterator<Item = Result<(ModuleSection<'a>, Ordering<ModuleSectionOrder>), E>> {
-    //     self.map(|result| {
-    //         let section = result?;
-    //         if let Some(known) = section.to_module_section() {
-    //             Ok((known, section.ordering()))
-    //         } else {
-    //             Err(nom::Err::Failure(E::from_error_kind_and_cause(
-    //                 section.remaining_input(),
-    //                 error::ErrorKind::Verify,
-    //                 error::ErrorCause::InvalidTag(error::InvalidTag::ModuleSectionId(
-    //                     section.section.id,
-    //                 )),
-    //             )))
-    //         }
-    //     })
-    // }
+    /// Returns an [`Iterator`] that returns an [`Err`] for unknown [`Section`]s.
+    ///
+    /// An error is yielded if a [`Section`] could not be parsed, if non-custom a
+    /// [`ModuleSection`]s were not in the correct order, or if a non-custom [`Section`] with
+    /// an unknown [*id*] was encountered.
+    ///
+    /// [*id*]: Section::id
+    pub fn without_unknown(
+        self,
+    ) -> impl core::iter::FusedIterator<
+        Item = Result<(ModuleSection<'a>, Ordering<ModuleSectionOrder>), E>,
+    > {
+        self.map(|result| {
+            let section = result?;
+            if let Ok(known) = section.to_module_section::<()>().cloned() {
+                Ok((known, section.ordering()))
+            } else {
+                Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                    section.remaining_input(),
+                    error::ErrorKind::Verify,
+                    error::ErrorCause::InvalidTag(error::InvalidTag::ModuleSectionId(
+                        section.section_id,
+                    )),
+                )))
+            }
+        })
+    }
 }
 
 impl<'a, E: ErrorSource<'a>> crate::input::AsInput<'a> for ModuleSectionSequence<'a, E> {
