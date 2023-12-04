@@ -71,6 +71,8 @@ impl<'a, E: ErrorSource<'a>> Iterator for BrTableTargets<'a, E> {
     }
 }
 
+impl<'a, E: ErrorSource<'a>> core::iter::FusedIterator for BrTableTargets<'a, E> {}
+
 impl<'a, E: ErrorSource<'a> + core::fmt::Debug> core::fmt::Debug for BrTableTargets<'a, E> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&self.targets, f)

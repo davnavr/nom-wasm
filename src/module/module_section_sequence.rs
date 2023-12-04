@@ -291,6 +291,8 @@ impl<'a, E: ErrorSource<'a>> Iterator for ModuleSectionSequence<'a, E> {
     }
 }
 
+impl<'a, E: ErrorSource<'a>> core::iter::FusedIterator for ModuleSectionSequence<'a, E> {}
+
 impl<'a, E> core::fmt::Debug for ModuleSectionSequence<'a, E>
 where
     E: ErrorSource<'a> + core::fmt::Debug,

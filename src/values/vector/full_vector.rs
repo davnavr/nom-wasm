@@ -70,6 +70,7 @@ where
         crate::input::AsInput::as_input(&self.vector)
     }
 }
+
 impl<'a, T, E, P> Iterator for FullVector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
@@ -91,6 +92,13 @@ where
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.vector.size_hint()
     }
+}
+
+impl<'a, T, E, P> core::iter::FusedIterator for FullVector<'a, T, E, P>
+where
+    E: ErrorSource<'a>,
+    P: Parser<&'a [u8], T, E>,
+{
 }
 
 impl<'a, T, E, P> Debug for FullVector<'a, T, E, P>

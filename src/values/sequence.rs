@@ -5,7 +5,7 @@ use core::fmt::Debug;
 
 /// Trait for parsing sequences of items.
 pub trait Sequence<'a>:
-    crate::input::AsInput<'a> + Iterator<Item = Result<Self::Output, Self::Error>>
+    crate::input::AsInput<'a> + core::iter::FusedIterator<Item = Result<Self::Output, Self::Error>>
 {
     /// The type returned when an items is successfully parsed.
     type Output;
@@ -29,7 +29,7 @@ pub trait Sequence<'a>:
 impl<'a, T, E, S> Sequence<'a> for S
 where
     E: crate::error::ErrorSource<'a>,
-    S: crate::input::AsInput<'a> + Iterator<Item = Result<T, E>>,
+    S: crate::input::AsInput<'a> + core::iter::FusedIterator<Item = Result<T, E>>,
 {
     type Output = T;
     type Error = E;
@@ -161,6 +161,16 @@ impl<'a, S: Sequence<'a>> Iterator for &mut SequenceIter<'a, S> {
 }
 
 impl<'a, S: Sequence<'a>> core::iter::FusedIterator for &mut SequenceIter<'a, S> {}
+
+impl<'a, S> core::iter::ExactSizeIterator for &mut SequenceIter<'a, S>
+where
+    S: Sequence<'a> + core::iter::ExactSizeIterator,
+{
+    #[inline]
+    fn len(&self) -> usize {
+        self.sequence.len()
+    }
+}
 
 impl<'a, S: Sequence<'a>> Debug for SequenceIter<'a, S>
 where

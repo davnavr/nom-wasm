@@ -132,6 +132,8 @@ impl<'a, E: ErrorSource<'a>> Iterator for Sequence<'a, E> {
     }
 }
 
+impl<'a, E: ErrorSource<'a>> core::iter::FusedIterator for Sequence<'a, E> {}
+
 impl<'a, E: ErrorSource<'a> + core::fmt::Debug> core::fmt::Debug for Sequence<'a, E> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&crate::values::SequenceDebug::from(self.clone()), f)

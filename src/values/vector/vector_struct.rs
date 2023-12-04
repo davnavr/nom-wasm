@@ -96,6 +96,7 @@ where
         })
     }
 }
+
 impl<'a, T, E, P> Iterator for Vector<'a, T, E, P>
 where
     E: ErrorSource<'a>,
@@ -124,6 +125,13 @@ where
         // Lower bound of 0 since an error can occur when the first item is parsed
         (0, Some(self.remaining))
     }
+}
+
+impl<'a, T, E, P> core::iter::FusedIterator for Vector<'a, T, E, P>
+where
+    E: ErrorSource<'a>,
+    P: Parser<&'a [u8], T, E>,
+{
 }
 
 impl<'a, T, E, P> Clone for Vector<'a, T, E, P>

@@ -92,6 +92,13 @@ where
     }
 }
 
+impl<'a, const MIN: u32, T, E, P> core::iter::FusedIterator for BoundedVector<'a, MIN, T, E, P>
+where
+    E: ErrorSource<'a>,
+    P: Parser<&'a [u8], T, E>,
+{
+}
+
 impl<'a, const MIN: u32, T, E, P> Clone for BoundedVector<'a, MIN, T, E, P>
 where
     E: ErrorSource<'a>,
