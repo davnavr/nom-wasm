@@ -103,6 +103,17 @@ impl<'a, S: Sequence<'a>> SequenceIter<'a, S> {
         Ok(v)
     }
 
+    /// Attempts to [`Clone`] the [`Sequence`], or returns `Err` if an error occured while a
+    /// previous item in the [`Sequence`] could not be parsed.
+    pub fn try_clone(&self) -> core::result::Result<Self, &nom::Err<S::Error>>
+    where
+        S: Clone,
+    {
+        self.error
+            .as_ref()
+            .map(|_| Self::from(self.sequence.clone()))
+    }
+
     fn debug_fmt(mut self, f: &mut core::fmt::Formatter) -> core::fmt::Result
     where
         S::Output: Debug,
@@ -155,10 +166,13 @@ impl<'a, S: Sequence<'a>> Debug for SequenceIter<'a, S>
 where
     S: Clone,
     S::Output: Debug,
-    S::Error: Clone + Debug,
+    S::Error: Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        self.clone().debug_fmt(f)
+        match self.try_clone() {
+            Err(err) => core::fmt::Debug::fmt(err, f),
+            Ok(iter) => iter.debug_fmt(f),
+        }
     }
 }
 
