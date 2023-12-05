@@ -2,6 +2,10 @@
 
 mod add_cause;
 mod cause;
+mod component;
+mod invalid_flags;
+mod invalid_tag;
+mod length_mismatch;
 
 #[cfg(feature = "alloc")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "alloc")))]
@@ -14,10 +18,11 @@ pub use crate::{
     values::InvalidVector,
 };
 
-pub use cause::{
-    ErrorCause, ImportComponent, InvalidFlags, InvalidFlagsValue, InvalidTag, LengthMismatch,
-    LimitsComponent, MemArgComponent,
-};
+pub use cause::ErrorCause;
+pub use component::{ImportComponent, LimitsComponent, MemArgComponent};
+pub use invalid_flags::{InvalidFlags, InvalidFlagsValue};
+pub use invalid_tag::InvalidTag;
+pub use length_mismatch::LengthMismatch;
 
 #[cfg(feature = "alloc")]
 pub use verbose_error::VerboseError;

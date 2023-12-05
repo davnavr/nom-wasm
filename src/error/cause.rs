@@ -1,171 +1,4 @@
-use core::fmt::{Display, Formatter};
-
-/// Describes an [`ErrorCause`] where the length of some data was incorrect.
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[allow(missing_docs)]
-pub struct LengthMismatch {
-    pub expected: u32,
-    pub actual: u32,
-}
-
-impl LengthMismatch {
-    fn print(&self, name: &str, f: &mut Formatter) -> core::fmt::Result {
-        write!(
-            f,
-            "expected {} bytes for {name}, but got {}",
-            self.expected, self.actual
-        )
-    }
-}
-
-/// Error type used when a byte or 32-bit enumeration value was invalid.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum InvalidTag {
-    /// An invalid [`ModuleSectionId`](crate::module::ModuleSectionId).
-    ModuleSectionId(u8),
-    #[allow(missing_docs)]
-    FuncType(Option<u8>),
-    /// An invalid [`ImportDesc`](crate::module::ImportDesc).
-    ImportDesc(Option<u8>),
-}
-
-impl Display for InvalidTag {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let (value, value_width) = match self {
-            Self::ModuleSectionId(b) => (Some(u32::from(*b)), 4),
-            Self::FuncType(b) | Self::ImportDesc(b) => (b.map(u32::from), 4),
-        };
-
-        let name = match self {
-            Self::ModuleSectionId(_) => "module section ID",
-            Self::FuncType(_) => "function type",
-            Self::ImportDesc(_) => "import desc",
-        };
-
-        if let Some(value) = value {
-            write!(
-                f,
-                "the {name} tag {value:#0value_width$X} ({value}) is invalid"
-            )
-        } else {
-            write!(f, "missing {name} tag")
-        }
-    }
-}
-
-#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
-#[cfg(feature = "std")]
-impl std::error::Error for InvalidTag {}
-
-/// Used with [`InvalidFlags`] to indicate what values were invalid.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[allow(clippy::exhaustive_enums)]
-pub enum InvalidFlagsValue<V: Copy> {
-    /// The flags were parsed, but had invalid flags.
-    Invalid {
-        /// The flags value that *contains* the invalid flags.
-        value: V,
-        /// The flags that caused validation to fail.
-        invalid: V,
-    },
-    /// Flags could not be parsed.
-    Missing,
-}
-
-/// Error type used when a byte or 32-bit flags combination was invalid.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum InvalidFlags {
-    /// Invalid flags for [`Limits`](crate::types::Limits).
-    Limits(InvalidFlagsValue<u8>),
-    /// Invalid flags for a [`GlobalType`](crate::types::GlobalType).
-    GlobalType(InvalidFlagsValue<u8>),
-}
-
-impl Display for InvalidFlags {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let (name, invalid) = match self {
-            Self::Limits(e) => ("limits", e),
-            Self::GlobalType(e) => ("global type", e),
-        };
-
-        match invalid {
-            InvalidFlagsValue::Invalid { value, invalid } => write!(
-                f,
-                "the {name} flags {value:#04X} contains invalid flag(s): {invalid:#04X}"
-            ),
-            InvalidFlagsValue::Missing => write!(f, "missing {name} flags"),
-        }
-    }
-}
-
-#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
-#[cfg(feature = "std")]
-impl std::error::Error for InvalidFlags {}
-
-/// Indicates which part of a [`Limits`](crate::types::Limits) could not be parsed.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-#[non_exhaustive]
-#[allow(missing_docs)]
-pub enum LimitsComponent {
-    Minimum,
-    Maximum,
-}
-
-impl Display for LimitsComponent {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.write_str(match self {
-            Self::Minimum => "minimum",
-            Self::Maximum => "maximum",
-        })
-    }
-}
-
-/// Indicates which field of an [`Import`](crate::module::Import) could not be parsed.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-#[non_exhaustive]
-#[allow(missing_docs)]
-pub enum ImportComponent {
-    Module,
-    Name,
-}
-
-impl Display for ImportComponent {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.write_str(match self {
-            Self::Module => "module name",
-            Self::Name => "import name",
-        })
-    }
-}
-
-/// Indicates why a [`MemArg`](crate::isa::MemArg) could not be parsed.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-#[non_exhaustive]
-#[allow(missing_docs)]
-pub enum MemArgComponent {
-    /// Indicates that the [**`align`**] field could not be parsed when [`None`]; otherwise,
-    /// indicates that the [**`align`**] was too large.
-    ///
-    /// [**`align`**]: crate::isa::MemArg::align
-    Alignment(Option<u32>),
-    Offset,
-    Memory,
-}
-
-impl Display for MemArgComponent {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Alignment(Some(a)) => {
-                write!(f, "specified alignment was 2^{a}, which is too large")
-            }
-            Self::Alignment(None) => f.write_str("alignment field"),
-            Self::Offset => f.write_str("offset field"),
-            Self::Memory => f.write_str("memory field"),
-        }
-    }
-}
+use core::fmt::Display;
 
 /// Describes why a parser error occured.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -177,19 +10,19 @@ pub enum ErrorCause {
         destination: crate::values::leb128::Destination,
         reason: crate::values::leb128::InvalidEncoding,
     },
-    InvalidTag(InvalidTag),
-    InvalidFlags(InvalidFlags),
+    InvalidTag(crate::error::InvalidTag),
+    InvalidFlags(crate::error::InvalidFlags),
     Vector(crate::values::InvalidVector),
     #[non_exhaustive]
     NameLength,
-    NameContents(LengthMismatch),
+    NameContents(crate::error::LengthMismatch),
     NameEncoding(core::str::Utf8Error),
     Index(&'static &'static str),
     #[non_exhaustive]
     SectionId,
     #[non_exhaustive]
     SectionLength,
-    SectionContents(LengthMismatch),
+    SectionContents(crate::error::LengthMismatch),
     #[non_exhaustive]
     CustomSectionName,
     PreambleMagic(crate::module::preamble::InvalidMagic),
@@ -211,7 +44,7 @@ pub enum ErrorCause {
     ValType(Option<crate::module::TypeIdx>),
     Limits {
         index_type: crate::types::IdxType,
-        component: LimitsComponent,
+        component: crate::error::LimitsComponent,
     },
     RefType(crate::types::ValType),
     #[non_exhaustive]
@@ -226,7 +59,7 @@ pub enum ErrorCause {
     ImportDesc {
         kind: u8,
     },
-    Import(ImportComponent),
+    Import(crate::error::ImportComponent),
     ModuleSectionOrder(crate::ordering::OrderingError<crate::module::ModuleSectionOrder>),
     Opcode(crate::isa::InvalidOpcode),
     #[non_exhaustive]
@@ -235,7 +68,7 @@ pub enum ErrorCause {
         reason: crate::isa::InvalidInstr,
     },
     Expr(crate::isa::InvalidExpr),
-    MemArg(MemArgComponent),
+    MemArg(crate::error::MemArgComponent),
 }
 
 crate::static_assert::check_size!(ErrorCause, <= 16);
@@ -404,6 +237,7 @@ impl std::error::Error for ErrorCause {
             Self::InvalidTag(e) => e,
             Self::InvalidFlags(e) => e,
             Self::NameEncoding(e) => e,
+            Self::SectionContents(e) | Self::NameContents(e) => e,
             Self::PreambleMagic(e) => e,
             Self::ModuleSectionOrder(e) => e,
             Self::Opcode(e) => e,
