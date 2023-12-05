@@ -18,9 +18,8 @@ impl<'a, E: ErrorSource<'a>> BrTableTargets<'a, E> {
                 targets: crate::index::IndexVectorParser::new(count, remaining, Default::default()),
             })
         } else {
-            Err(nom::Err::Failure(E::from_error_kind_and_cause(
+            Err(nom::Err::Failure(E::from_error_cause(
                 input,
-                nom::error::ErrorKind::Verify,
                 crate::error::ErrorCause::Instr {
                     opcode: crate::isa::Opcode::BrTable,
                     reason: crate::isa::InvalidInstr::BrTableLabelCount,

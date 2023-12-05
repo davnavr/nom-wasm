@@ -1,9 +1,3 @@
-use crate::{
-    error::{AddCause as _, ErrorCause, MemArgComponent},
-    index::Index as _,
-    module::MemIdx,
-};
-
 /// Specifies the alignment for a [`MemArg`].
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
@@ -87,7 +81,7 @@ pub struct MemArg {
     ///
     /// Specifiying a linear memory other than the default (`0`), requires the
     /// [multi-memory proposal](https://github.com/WebAssembly/multi-memory).
-    pub memory: MemIdx,
+    pub memory: crate::module::MemIdx,
 }
 
 impl MemArg {
@@ -98,25 +92,29 @@ impl MemArg {
     /// Returns an error if a [`MemArgComponent`] could not be parsed, or if the [**`align`**]
     /// field value is too large.
     ///
+    /// [`MemArgComponent`]: crate::error::MemArgComponent
     /// [**`align`**]: MemArg::align
     pub fn parse<'a, E>(input: &'a [u8]) -> crate::Parsed<'a, Self, E>
     where
         E: crate::error::ErrorSource<'a>,
     {
+        use crate::error::{AddCause as _, ErrorCause, MemArgComponent};
+
         let (input, a) = crate::values::leb128_u32(input)
-            .add_cause(ErrorCause::MemArg(MemArgComponent::Alignment(None)))?;
+            .add_cause(input, ErrorCause::MemArg(MemArgComponent::Alignment(None)))?;
 
         let (input, offset) = crate::values::leb128_u64(input)
-            .add_cause(ErrorCause::MemArg(MemArgComponent::Offset))?;
+            .add_cause(input, ErrorCause::MemArg(MemArgComponent::Offset))?;
 
         let align: u32;
 
         let (input, memory) = if a < 64 {
             align = a;
-            (input, MemIdx(0))
+            (input, crate::module::MemIdx(0))
         } else {
             align = a - 64;
-            MemIdx::parse(input).add_cause(ErrorCause::MemArg(MemArgComponent::Memory))?
+            crate::index::Index::parse(input)
+                .add_cause(input, ErrorCause::MemArg(MemArgComponent::Memory))?
         };
 
         if let Some(align) = u8::try_from(align).ok().and_then(Align::new) {
@@ -129,9 +127,8 @@ impl MemArg {
                 },
             ))
         } else {
-            Err(nom::Err::Failure(E::from_error_kind_and_cause(
+            Err(nom::Err::Failure(E::from_error_cause(
                 input,
-                nom::error::ErrorKind::Verify,
                 ErrorCause::MemArg(MemArgComponent::Alignment(Some(align))),
             )))
         }

@@ -25,10 +25,14 @@ where
     R: FnMut(B, &mut ResultType<'a, E>) -> crate::input::Result<C, E>,
 {
     use crate::parser::Parser as _;
+
     let mut func_type_tag = nom::bytes::streaming::tag([FUNC_TYPE_TAG]).with_error_cause(|input| {
-        crate::error::ErrorCause::InvalidTag(crate::error::InvalidTag::FuncType(
-            input.first().copied(),
-        ))
+        (
+            input,
+            crate::error::ErrorCause::InvalidTag(crate::error::InvalidTag::FuncType(
+                input.first().copied(),
+            )),
+        )
     });
 
     move |input| -> crate::Parsed<'a, _, E> {

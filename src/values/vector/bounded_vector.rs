@@ -15,9 +15,8 @@ fn minimum_bounds_error<'a, const MIN: u32, E>(input: &'a [u8], actual: usize) -
 where
     E: ErrorSource<'a>,
 {
-    E::from_error_kind_and_cause(
+    E::from_error_cause(
         input,
-        crate::error::ErrorKind::Verify,
         crate::error::ErrorCause::Vector(crate::values::InvalidVector::Remaining {
             expected: (MIN.to_usize() - actual).try_into().unwrap_or(u32::MAX),
         }),

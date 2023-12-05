@@ -100,7 +100,7 @@ impl std::error::Error for InvalidMagic {}
 pub fn magic<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, (), E> {
     nom::bytes::streaming::tag(MAGIC)
         .map(|_| ())
-        .with_error_cause(|input| ErrorCause::PreambleMagic(InvalidMagic::new(input)))
+        .with_error_cause(|input| (input, ErrorCause::PreambleMagic(InvalidMagic::new(input))))
         .parse(input)
 }
 
@@ -113,10 +113,13 @@ pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, (), E> {
     nom::combinator::cut(nom::bytes::streaming::tag(RECOGNIZED_VERSION))
         .map(|_| ())
         .with_error_cause(|input| {
-            ErrorCause::PreambleVersion(
-                input
-                    .get(..4)
-                    .map(|version| u32::from_le_bytes(version.try_into().unwrap())),
+            (
+                input,
+                ErrorCause::PreambleVersion(
+                    input
+                        .get(..4)
+                        .map(|version| u32::from_le_bytes(version.try_into().unwrap())),
+                ),
             )
         })
         .parse(input)
@@ -129,6 +132,6 @@ pub fn parse_any<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, [u8; 4],
     let (input, ()) = magic(input)?;
     nom::combinator::cut(nom::bytes::complete::take(4usize))
         .map(|version: &[u8]| version.try_into().unwrap())
-        .with_error_cause(|_| ErrorCause::PreambleVersion(None))
+        .with_error_cause(|input| (input, ErrorCause::PreambleVersion(None)))
         .parse(input)
 }

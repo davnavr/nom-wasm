@@ -8,7 +8,7 @@ pub(crate) struct WithErrorCause<P, F> {
 impl<'a, O, E, P, F> nom::Parser<&'a [u8], O, E> for WithErrorCause<P, F>
 where
     P: nom::Parser<&'a [u8], O, E>,
-    F: FnMut(&'a [u8]) -> ErrorCause,
+    F: FnMut(&'a [u8]) -> (&'a [u8], ErrorCause),
     E: ErrorSource<'a>,
 {
     fn parse(&mut self, input: &'a [u8]) -> nom::IResult<&'a [u8], O, E> {
@@ -25,7 +25,7 @@ where
     #[inline]
     fn with_error_cause<F>(self, f: F) -> WithErrorCause<Self, F>
     where
-        F: FnMut(&'a [u8]) -> ErrorCause,
+        F: FnMut(&'a [u8]) -> (&'a [u8], ErrorCause),
     {
         WithErrorCause {
             parser: self,

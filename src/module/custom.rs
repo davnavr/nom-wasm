@@ -2,11 +2,7 @@
 //!
 //! [custom sections]: https://webassembly.github.io/spec/core/binary/modules.html#custom-section
 
-use crate::{
-    error::{AddCause as _, ErrorCause, ErrorSource},
-    input,
-    section::Section,
-};
+use crate::{error::ErrorSource, input, section::Section};
 
 /// Represents a [*custom section*] within a [WebAssembly module].
 ///
@@ -33,8 +29,10 @@ impl<'a> CustomSection<'a> {
     ///
     /// [`contents`]: Section::contents
     pub fn parse<E: ErrorSource<'a>>(input: &'a [u8]) -> input::Result<Self, E> {
+        use crate::error::AddCause as _;
+
         crate::values::name(input)
-            .add_cause(ErrorCause::CustomSectionName)
+            .add_cause(input, crate::error::ErrorCause::CustomSectionName)
             .map(|(contents, name)| Self { name, contents })
     }
 

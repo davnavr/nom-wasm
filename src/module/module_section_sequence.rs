@@ -84,9 +84,8 @@ impl<'a> UnknownModuleSection<'a> {
 
                 if let Some(next) = ModuleSectionOrder::from_section_id(module_section.id()) {
                     ordering.check(next).map_err(|e| {
-                        nom::Err::Failure(E::from_error_kind_and_cause(
+                        nom::Err::Failure(E::from_error_cause(
                             remaining,
-                            error::ErrorKind::Verify,
                             error::ErrorCause::ModuleSectionOrder(e),
                         ))
                     })?;
@@ -134,9 +133,8 @@ impl<'a> UnknownModuleSection<'a> {
     /// [`Custom`]: ModuleSection::Custom
     pub fn to_module_section<E: ErrorSource<'a>>(&self) -> Result<&ModuleSection<'a>, E> {
         self.known.as_ref().ok_or_else(|| {
-            nom::Err::Failure(E::from_error_kind_and_cause(
+            nom::Err::Failure(E::from_error_cause(
                 self.remaining,
-                error::ErrorKind::Verify,
                 error::ErrorCause::InvalidTag(error::InvalidTag::ModuleSectionId(self.section_id)),
             ))
         })
@@ -260,9 +258,8 @@ impl<'a, E: ErrorSource<'a>> ModuleSectionSequence<'a, E> {
             if let Ok(known) = section.to_module_section::<()>().cloned() {
                 Ok((known, section.ordering()))
             } else {
-                Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                Err(nom::Err::Failure(E::from_error_cause(
                     section.remaining_input(),
-                    error::ErrorKind::Verify,
                     error::ErrorCause::InvalidTag(error::InvalidTag::ModuleSectionId(
                         section.section_id,
                     )),

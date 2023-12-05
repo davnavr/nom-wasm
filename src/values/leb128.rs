@@ -1,11 +1,6 @@
 //! Functions for parsing integers in the
 //! [*LEB128* format](https://webassembly.github.io/spec/core/binary/values.html#integers).
 
-use crate::{
-    error::{ErrorCause, ErrorKind, ErrorSource},
-    Parsed,
-};
-
 const MORE_FLAG: u8 = 0b1000_0000;
 const VALUE_MASK: u8 = 0b0111_1111;
 
@@ -36,7 +31,10 @@ macro_rules! unsigned_parsers {
         $integer:ty => $name:ident[$destination:ident];
     )*) => {$(
         $(#[$meta])*
-        pub fn $name<'a, E: ErrorSource<'a>>(mut input: &'a [u8]) -> Parsed<'a, $integer, E> {
+        pub fn $name<'a, E>(mut input: &'a [u8]) -> crate::Parsed<'a, $integer, E>
+        where
+            E: crate::error::ErrorSource<'a>,
+        {
             let start = input;
             let mut result: $integer = 0;
             let mut shift = 0usize;
@@ -47,10 +45,9 @@ macro_rules! unsigned_parsers {
                     // TODO: Use CLZ?
                     let valid_mask = !(0xFFu8 << (<$integer>::BITS as usize - shift).min(7));
                     if byte & !(MORE_FLAG | valid_mask) != 0 {
-                        return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                        return Err(nom::Err::Failure(E::from_error_cause(
                             start,
-                            ErrorKind::TooLarge,
-                            ErrorCause::Leb128 {
+                            crate::error::ErrorCause::Leb128 {
                                 destination: Destination::$destination,
                                 reason: InvalidEncoding::Overflow,
                             },
@@ -64,10 +61,9 @@ macro_rules! unsigned_parsers {
                         break;
                     }
                 } else {
-                    return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                    return Err(nom::Err::Failure(E::from_error_cause(
                         start,
-                        ErrorKind::Complete,
-                        ErrorCause::Leb128 {
+                        crate::error::ErrorCause::Leb128 {
                             destination: Destination::$destination,
                             reason: InvalidEncoding::NoContinuation,
                         },
@@ -86,7 +82,10 @@ macro_rules! signed_parsers {
         $integer:ident ^ $storage:ident => $name:ident[$destination:ident];
     )*) => {$(
         $(#[$meta])*
-        pub fn $name<'a, E: ErrorSource<'a>>(mut input: &'a [u8]) -> Parsed<'a, $integer, E> {
+        pub fn $name<'a, E>(mut input: &'a [u8]) -> crate::Parsed<'a, $integer, E>
+        where
+            E: crate::error::ErrorSource<'a>,
+        {
             const SIGN_FLAG: u8 = 0b0100_0000;
             const STORAGE_BITS: usize = <$storage>::BITS as usize;
 
@@ -106,10 +105,9 @@ macro_rules! signed_parsers {
                         break;
                     }
                 } else {
-                    return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                    return Err(nom::Err::Failure(E::from_error_cause(
                         start,
-                        ErrorKind::Complete,
-                        ErrorCause::Leb128 {
+                        crate::error::ErrorCause::Leb128 {
                             destination: Destination::$destination,
                             reason: InvalidEncoding::NoContinuation,
                         },
@@ -120,10 +118,9 @@ macro_rules! signed_parsers {
             if let Ok(result) = $integer::try_from(destination) {
                 Ok((input, result))
             } else {
-                Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                Err(nom::Err::Failure(E::from_error_cause(
                     start,
-                    ErrorKind::TooLarge,
-                    ErrorCause::Leb128 {
+                    crate::error::ErrorCause::Leb128 {
                         destination: Destination::$destination,
                         reason: InvalidEncoding::Overflow,
                     },

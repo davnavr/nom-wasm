@@ -4,6 +4,7 @@ mod add_cause;
 mod cause;
 
 #[cfg(feature = "alloc")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "alloc")))]
 mod verbose_error;
 
 #[doc(no_inline)]
@@ -12,35 +13,31 @@ pub use crate::{
     module::preamble::InvalidMagic,
     values::InvalidVector,
 };
+
 pub use cause::{
     ErrorCause, ImportComponent, InvalidFlags, InvalidFlagsValue, InvalidTag, LengthMismatch,
     LimitsComponent, MemArgComponent,
 };
-#[doc(no_inline)]
-pub use nom::error::ErrorKind;
+
 #[cfg(feature = "alloc")]
 pub use verbose_error::VerboseError;
 
 pub(crate) use add_cause::AddCause;
 
-/// Default error type, which tracks an error's location, the kind of error that occured, and why
-/// it occured.
+/// Default error type, which tracks an error's location and the reason why it occured.
 #[derive(Clone, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct Error<'a> {
     /// A slice into the original input indicating where the error occured.
     pub input: &'a [u8],
-    /// The [`nom`] error code describing the kind of error that occured.
-    pub kind: ErrorKind,
-    /// A WASM parsing specific error code indicating why a parse failed.
-    pub cause: Option<ErrorCause>,
+    /// An error code indicating why a parse failed.
+    pub cause: ErrorCause,
 }
 
 impl core::fmt::Debug for Error<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Error")
             .field("input", &crate::hex::Bytes(self.input))
-            .field("kind", &self.kind)
             .field("cause", &self.cause)
             .finish()
     }
@@ -51,70 +48,84 @@ impl<'a> From<nom::error::Error<&'a [u8]>> for Error<'a> {
     fn from(error: nom::error::Error<&'a [u8]>) -> Self {
         Self {
             input: error.input,
-            kind: error.code,
-            cause: None,
+            cause: ErrorCause::Nom(error.code),
         }
     }
 }
 
 impl<'a> nom::error::ParseError<&'a [u8]> for Error<'a> {
     #[inline]
-    fn from_error_kind(input: &'a [u8], kind: ErrorKind) -> Self {
+    fn from_error_kind(input: &'a [u8], kind: nom::error::ErrorKind) -> Self {
         Self {
             input,
-            kind,
-            cause: None,
+            cause: ErrorCause::Nom(kind),
         }
     }
 
     #[inline]
-    fn append(_: &'a [u8], _: ErrorKind, other: Self) -> Self {
+    fn append(_: &'a [u8], _: nom::error::ErrorKind, other: Self) -> Self {
         other
     }
 }
 
-//#[cfg_attr(doc_cfg, doc(cfg(feature = "error_stack")))]
-//#[cfg(feature = "std")]
-//impl std::error::Error for Error<'_> {}
+impl core::fmt::Display for Error<'_> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Display::fmt(&self.cause, f)?;
 
-/// Common trait bounds required for an error type to be used by [`nom-wasm`](crate).
-pub trait ErrorSource<'a>: nom::error::ParseError<&'a [u8]> {
-    /// Attaches the given [`ErrorCause`] to an existing error.
+        if !self.input.is_empty() {
+            write!(f, ", for {} bytes in input:", self.input.len())?;
+
+            const DISPLAY_MAX: usize = 8;
+
+            for b in self.input.iter().take(DISPLAY_MAX) {
+                write!(f, " {b:02X}")?;
+            }
+
+            if self.input.len() > DISPLAY_MAX {
+                f.write_str(" ...")?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+#[cfg(feature = "std")]
+impl std::error::Error for Error<'_> {
     #[inline]
-    fn with_cause(self, cause: ErrorCause) -> Self {
-        let _ = cause;
-        self
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        std::error::Error::source(&self.cause)
+    }
+}
+
+/// Trait for error types used with [`nom-wasm`](crate).
+pub trait ErrorSource<'a>: nom::error::ParseError<&'a [u8]> {
+    /// Combines existing error with a newly constructed error.
+    #[inline]
+    fn append_with_cause(input: &'a [u8], cause: ErrorCause, other: Self) -> Self {
+        let _ = (input, cause);
+        other
     }
 
-    /// Creates a new error from the input where it occured, the `kind` of error that occured, and
-    /// an [`ErrorCause`].
+    /// Creates a new error from the input where it occured, and its [`ErrorCause`].
     #[inline]
-    fn from_error_kind_and_cause(input: &'a [u8], kind: ErrorKind, cause: ErrorCause) -> Self {
-        Self::from_error_kind(input, kind).with_cause(cause)
+    fn from_error_cause(input: &'a [u8], cause: ErrorCause) -> Self {
+        Self::from_error_kind(input, cause.to_error_kind())
     }
 }
 
 impl ErrorSource<'_> for () {}
 
-impl<'a> ErrorSource<'a> for (&'a [u8], ErrorKind) {}
+impl<'a> ErrorSource<'a> for (&'a [u8], nom::error::ErrorKind) {}
 
 impl<'a> ErrorSource<'a> for nom::error::Error<&'a [u8]> {}
 
+impl<'a> ErrorSource<'a> for nom::error::VerboseError<&'a [u8]> {}
+
 impl<'a> ErrorSource<'a> for Error<'a> {
-    fn with_cause(mut self, cause: ErrorCause) -> Self {
-        if self.cause.is_none() {
-            self.cause = Some(cause);
-        }
-
-        self
-    }
-
     #[inline]
-    fn from_error_kind_and_cause(input: &'a [u8], kind: ErrorKind, cause: ErrorCause) -> Self {
-        Self {
-            input,
-            kind,
-            cause: Some(cause),
-        }
+    fn from_error_cause(input: &'a [u8], cause: ErrorCause) -> Self {
+        Self { input, cause }
     }
 }

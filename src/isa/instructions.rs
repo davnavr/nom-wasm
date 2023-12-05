@@ -576,9 +576,8 @@ where
                 .and_then(core::num::NonZeroU8::new)
                 .unwrap_or(core::num::NonZeroU8::MAX);
 
-            let e = E::from_error_kind_and_cause(
+            let e = E::from_error_cause(
                 start,
-                crate::error::ErrorKind::Verify,
                 crate::error::ErrorCause::Instr {
                     opcode: Opcode::SelectTyped,
                     reason: isa::InvalidInstr::SelectTypedArity(arity),

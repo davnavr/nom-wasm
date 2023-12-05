@@ -5,7 +5,7 @@
 //!
 //! [binary encoding for modules]: https://webassembly.github.io/spec/core/binary/modules.html#binary-section
 
-use crate::error::{AddCause as _, ErrorCause, ErrorKind, ErrorSource};
+use crate::error::ErrorSource;
 
 /// Represents a [WebAssembly section], typically a [section within a module].
 ///
@@ -24,27 +24,27 @@ pub struct Section<'a> {
 impl<'a> Section<'a> {
     /// Parses a [`Section`] with the given `id` from the given `input`.
     pub fn parse<E: ErrorSource<'a>>(input: &'a [u8]) -> crate::Parsed<'a, Self, E> {
+        use crate::error::AddCause as _;
+
         let (input, id) = if let Some((id, remaining)) = input.split_first() {
             (remaining, *id)
         } else {
-            return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+            return Err(nom::Err::Failure(E::from_error_cause(
                 input,
-                ErrorKind::Tag,
-                ErrorCause::SectionId,
+                crate::error::ErrorCause::SectionId,
             )));
         };
 
-        let (input, length) =
-            crate::values::leb128_u32(input).add_cause(ErrorCause::SectionLength)?;
+        let (input, length) = crate::values::leb128_u32(input)
+            .add_cause(input, crate::error::ErrorCause::SectionLength)?;
 
         let length_usize = nom::ToUsize::to_usize(&length);
         if let Some(contents) = input.get(..length_usize) {
             Ok((&input[..length_usize], Self { id, contents }))
         } else {
-            Err(nom::Err::Failure(E::from_error_kind_and_cause(
+            Err(nom::Err::Failure(E::from_error_cause(
                 input,
-                ErrorKind::Eof,
-                ErrorCause::SectionContents(crate::error::LengthMismatch {
+                crate::error::ErrorCause::SectionContents(crate::error::LengthMismatch {
                     expected: length,
                     actual: input.len().try_into().unwrap_or(u32::MAX),
                 }),

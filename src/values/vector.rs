@@ -1,7 +1,4 @@
-use crate::{
-    error::{self, AddCause as _, ErrorSource},
-    Parsed,
-};
+use crate::{error::ErrorSource, Parsed};
 use nom::Parser;
 
 mod bounded_vector;
@@ -38,8 +35,14 @@ impl core::fmt::Display for InvalidVector {
 ///
 /// [*LEB128* encoded unsigned 32-bit integer]: crate::values::leb128_u32
 pub fn vector_length<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, u32, E> {
-    crate::values::leb128_u32(input)
-        .add_cause_with(|| error::ErrorCause::Vector(InvalidVector::Length))
+    use crate::error::AddCause as _;
+
+    crate::values::leb128_u32(input).add_cause_with(|| {
+        (
+            input,
+            crate::error::ErrorCause::Vector(InvalidVector::Length),
+        )
+    })
 }
 
 fn sequence_fold_inner<'a, O, E, R>(
@@ -62,8 +65,10 @@ where
                 Err(err) => {
                     return Err(err.map(|other| {
                         let expected = (count - i).try_into().unwrap_or(u32::MAX);
-                        E::append(input, error::ErrorKind::Count, other).with_cause(
-                            error::ErrorCause::Vector(InvalidVector::Remaining { expected }),
+                        E::append_with_cause(
+                            input,
+                            crate::error::ErrorCause::Vector(InvalidVector::Remaining { expected }),
+                            other,
                         )
                     }))
                 }

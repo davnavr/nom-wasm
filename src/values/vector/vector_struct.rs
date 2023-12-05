@@ -88,10 +88,12 @@ where
             .unwrap_or(u32::MAX);
 
         err.map(|other| {
-            E::append(self.input, crate::error::ErrorKind::Count, other).with_cause(
+            E::append_with_cause(
+                self.input,
                 crate::error::ErrorCause::Vector(crate::values::InvalidVector::Remaining {
                     expected,
                 }),
+                other,
             )
         })
     }

@@ -1,8 +1,3 @@
-use crate::{
-    error::{self, AddCause as _, ErrorCause},
-    isa::{self, InvalidOpcode},
-};
-
 macro_rules! opcode_enum {
     ($(
         $opcode_case:ident $wasm_name:literal $pascal_ident:ident $({ $($_fields:tt)* })? $_snake_ident:ident;
@@ -55,20 +50,19 @@ macro_rules! opcode_partial_eq {
 }
 
 opcode_partial_eq! {
-    isa::ByteOpcode,
-    isa::FCPrefixedOpcode,
-    isa::V128Opcode,
-    isa::FEPrefixedOpcode,
+    crate::isa::ByteOpcode,
+    crate::isa::FCPrefixedOpcode,
+    crate::isa::V128Opcode,
+    crate::isa::FEPrefixedOpcode,
 }
 
-fn parse_failed<'a, E>(input: &'a [u8], error: InvalidOpcode) -> nom::Err<E>
+fn parse_failed<'a, E>(input: &'a [u8], error: crate::isa::InvalidOpcode) -> nom::Err<E>
 where
-    E: error::ErrorSource<'a>,
+    E: crate::error::ErrorSource<'a>,
 {
-    nom::Err::Failure(E::from_error_kind_and_cause(
+    nom::Err::Failure(E::from_error_cause(
         input,
-        error::ErrorKind::Tag,
-        ErrorCause::Opcode(error),
+        crate::error::ErrorCause::Opcode(error),
     ))
 }
 
@@ -81,13 +75,15 @@ impl Opcode {
     /// recognized.
     pub fn parse<'a, E>(input: &'a [u8]) -> crate::Parsed<'a, Self, E>
     where
-        E: error::ErrorSource<'a>,
+        E: crate::error::ErrorSource<'a>,
     {
+        use crate::{error::AddCause as _, isa};
+
         let start = input;
         let (input, prefix) = if let Some((prefix, remaining)) = input.split_first() {
             (remaining, *prefix)
         } else {
-            return Err(parse_failed(start, InvalidOpcode::MISSING));
+            return Err(parse_failed(start, isa::InvalidOpcode::MISSING));
         };
 
         macro_rules! parse_actual {
@@ -95,8 +91,10 @@ impl Opcode {
                 match prefix {
                     $(
                         <$opcode>::PREFIX => {
-                            let missing_opcode = || ErrorCause::Opcode(InvalidOpcode::missing_actual(<$opcode>::PREFIX));
-                            let (input, actual) = crate::values::leb128_u32(input).add_cause_with(missing_opcode)?;
+                            let (input, actual) = crate::values::leb128_u32(input).add_cause_with(|| {
+                                (input, crate::error::ErrorCause::Opcode(isa::InvalidOpcode::missing_actual(<$opcode>::PREFIX)))
+                            })?;
+
                             match <$opcode>::try_from(actual) {
                                 Ok(opcode) => Ok((input, Self::from(opcode))),
                                 Err(unrecognized) => Err(parse_failed(start, unrecognized)),

@@ -1,5 +1,5 @@
 use crate::{
-    error::{self, AddCause, ErrorCause, ErrorKind, ErrorSource},
+    error::{self, AddCause as _, ErrorCause, ErrorSource},
     types::{self, BlockType, Limits, ValType},
     values::leb128,
     Parsed,
@@ -15,7 +15,7 @@ impl BlockType {
     /// value for 32-bit indices.
     pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
         let start = input;
-        let (input, value) = leb128::s64(input).add_cause(ErrorCause::BlockType(None))?;
+        let (input, value) = leb128::s64(input).add_cause(input, ErrorCause::BlockType(None))?;
 
         let block_type = match value {
             -64 => Self::Empty,
@@ -28,9 +28,8 @@ impl BlockType {
             -17 => Self::Inline(ValType::ExternRef),
             _ if value < 0 => {
                 // Unknown
-                return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                return Err(nom::Err::Failure(E::from_error_cause(
                     start,
-                    ErrorKind::Tag,
                     ErrorCause::BlockType(core::num::NonZeroI64::new(value)),
                 )));
             }
@@ -41,9 +40,8 @@ impl BlockType {
                     debug_assert!(value != 0);
 
                     // Type index too large
-                    return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                    return Err(nom::Err::Failure(E::from_error_cause(
                         start,
-                        ErrorKind::Verify,
                         ErrorCause::BlockType(core::num::NonZeroI64::new(value)),
                     )));
                 }
@@ -66,14 +64,12 @@ impl ValType {
     pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
         match BlockType::parse(input)? {
             (input, BlockType::Inline(val_type)) => Ok((input, val_type)),
-            (_, BlockType::Empty) => Err(nom::Err::Failure(E::from_error_kind_and_cause(
+            (_, BlockType::Empty) => Err(nom::Err::Failure(E::from_error_cause(
                 input,
-                ErrorKind::Verify,
                 ErrorCause::ValType(None),
             ))),
-            (_, BlockType::Index(index)) => Err(nom::Err::Failure(E::from_error_kind_and_cause(
+            (_, BlockType::Index(index)) => Err(nom::Err::Failure(E::from_error_cause(
                 input,
-                ErrorKind::Verify,
                 ErrorCause::ValType(Some(index)),
             ))),
         }
@@ -93,9 +89,8 @@ impl types::RefType {
         match ValType::parse(input)? {
             (input, ValType::FuncRef) => Ok((input, Self::Func)),
             (input, ValType::ExternRef) => Ok((input, Self::Extern)),
-            (_, bad) => Err(nom::Err::Failure(E::from_error_kind_and_cause(
+            (_, bad) => Err(nom::Err::Failure(E::from_error_cause(
                 input,
-                ErrorKind::Verify,
                 ErrorCause::RefType(bad),
             ))),
         }
@@ -120,9 +115,8 @@ impl Limits {
         let (input, flags) = if let Some((first, input)) = input.split_first() {
             (input, *first)
         } else {
-            return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+            return Err(nom::Err::Failure(E::from_error_cause(
                 input,
-                ErrorKind::OneOf,
                 ErrorCause::InvalidFlags(error::InvalidFlags::Limits(
                     error::InvalidFlagsValue::Missing,
                 )),
@@ -133,9 +127,8 @@ impl Limits {
 
         let invalid = flags & (!VALID_MASK);
         if invalid != 0 {
-            return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+            return Err(nom::Err::Failure(E::from_error_cause(
                 &input[..1],
-                ErrorKind::Verify,
                 ErrorCause::InvalidFlags(error::InvalidFlags::Limits(
                     error::InvalidFlagsValue::Invalid {
                         value: flags,
@@ -154,18 +147,24 @@ impl Limits {
             ($parser:ident => $idx:ident) => {{
                 let index_type = types::IdxType::$idx;
 
-                let (input, min) = leb128::$parser(input).add_cause(ErrorCause::Limits {
-                    index_type,
-                    component: error::LimitsComponent::Minimum,
-                })?;
+                let (input, min) = leb128::$parser(input).add_cause(
+                    input,
+                    ErrorCause::Limits {
+                        index_type,
+                        component: error::LimitsComponent::Minimum,
+                    },
+                )?;
 
                 let (input, max) = if has_maximum {
-                    leb128::$parser(input)
-                        .add_cause(ErrorCause::Limits {
+                    use nom::Parser as _;
+
+                    leb128::$parser.map(Some).parse(input).add_cause(
+                        input,
+                        ErrorCause::Limits {
                             index_type,
                             component: error::LimitsComponent::Maximum,
-                        })
-                        .map(|(input, max)| (input, Some(max)))?
+                        },
+                    )?
                 } else {
                     (input, None)
                 };
@@ -195,14 +194,13 @@ impl Limits {
 impl types::GlobalType {
     #[allow(missing_docs)]
     pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
-        let (input, value_type) = ValType::parse(input).add_cause(ErrorCause::GlobalType)?;
+        let (input, value_type) = ValType::parse(input).add_cause(input, ErrorCause::GlobalType)?;
 
         let (input, flags) = if let Some((first, input)) = input.split_first() {
             (input, *first)
         } else {
-            return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+            return Err(nom::Err::Failure(E::from_error_cause(
                 input,
-                ErrorKind::OneOf,
                 ErrorCause::InvalidFlags(error::InvalidFlags::GlobalType(
                     error::InvalidFlagsValue::Missing,
                 )),
@@ -213,9 +211,8 @@ impl types::GlobalType {
             0 => types::Mutability::Constant,
             1 => types::Mutability::Variable,
             _ => {
-                return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+                return Err(nom::Err::Failure(E::from_error_cause(
                     &input[..1],
-                    ErrorKind::OneOf,
                     ErrorCause::InvalidFlags(error::InvalidFlags::GlobalType(
                         error::InvalidFlagsValue::Invalid {
                             value: flags,
@@ -241,9 +238,12 @@ impl types::MemType {
     ///
     /// See the documentation for [`Limits::parse()`] for more information.
     pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
-        Limits::parse(input)
-            .add_cause(ErrorCause::MemType)
-            .map(|(input, limits)| (input, Self { limits }))
+        use nom::Parser as _;
+
+        Limits::parse
+            .map(|limits| Self { limits })
+            .parse(input)
+            .add_cause(input, ErrorCause::MemType)
     }
 }
 
@@ -251,9 +251,9 @@ impl types::TableType {
     #[allow(missing_docs)]
     pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
         let (input, element_type) =
-            types::RefType::parse(input).add_cause(ErrorCause::TableType)?;
+            types::RefType::parse(input).add_cause(input, ErrorCause::TableType)?;
 
-        let (input, limits) = Limits::parse(input).add_cause(ErrorCause::TableType)?;
+        let (input, limits) = Limits::parse(input).add_cause(input, ErrorCause::TableType)?;
 
         Ok((
             input,
@@ -268,8 +268,10 @@ impl types::TableType {
 impl types::TagType {
     #[allow(missing_docs)]
     pub fn parse<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> Parsed<'a, Self, E> {
-        let (input, _) = nom::bytes::complete::tag(&[0u8])(input).add_cause(ErrorCause::TagType)?;
-        let (input, index) = crate::index::Index::parse(input).add_cause(ErrorCause::TagType)?;
+        let (input, _) =
+            nom::bytes::complete::tag(&[0u8])(input).add_cause(input, ErrorCause::TagType)?;
+        let (input, index) =
+            crate::index::Index::parse(input).add_cause(input, ErrorCause::TagType)?;
         Ok((input, Self::Exception(index)))
     }
 }

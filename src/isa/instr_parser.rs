@@ -1,33 +1,30 @@
 use crate::{
-    error::{AddCause as _, ErrorCause, ErrorKind, ErrorSource, InvalidInstr},
-    index::Index as _,
-    isa::{self, Opcode, ParseInstr},
-    module::{self, MemIdx, TableIdx, TypeIdx},
+    error::{ErrorSource, InvalidInstr},
+    isa::{Opcode, ParseInstr},
 };
 
 trait ResultExt<'a, T, E: ErrorSource<'a>> {
-    fn to_parsed(self, input: &&'a [u8], opcode: Opcode) -> crate::input::Result<T, E>;
+    fn to_parsed(self, input: &'a [u8], opcode: Opcode) -> crate::input::Result<T, E>;
 }
 
-impl<'a, T, E: ErrorSource<'a>> ResultExt<'a, T, E> for isa::Result<T, E> {
+impl<'a, T, E: ErrorSource<'a>> ResultExt<'a, T, E> for crate::isa::Result<T, E> {
     #[inline]
-    fn to_parsed(self, start: &&'a [u8], opcode: Opcode) -> crate::input::Result<T, E> {
+    fn to_parsed(self, start: &'a [u8], opcode: Opcode) -> crate::input::Result<T, E> {
+        use crate::isa::ParseInstrError;
+
         match self {
             Ok(value) => Ok(value),
-            Err(isa::ParseInstrError::Unrecognized) => {
-                Err(nom::Err::Failure(E::from_error_kind_and_cause(
-                    start,
-                    ErrorKind::Verify,
-                    ErrorCause::Instr {
-                        opcode,
-                        reason: InvalidInstr::Unrecognized,
-                    },
-                )))
+            Err(ParseInstrError::Unrecognized) => Err(nom::Err::Failure(E::from_error_cause(
+                start,
+                crate::error::ErrorCause::Instr {
+                    opcode,
+                    reason: InvalidInstr::Unrecognized,
+                },
+            ))),
+            Err(ParseInstrError::Cause(cause)) => {
+                Err(nom::Err::Failure(E::from_error_cause(start, cause)))
             }
-            Err(isa::ParseInstrError::Cause(cause)) => Err(nom::Err::Failure(
-                E::from_error_kind_and_cause(start, ErrorKind::Verify, cause),
-            )),
-            Err(isa::ParseInstrError::Nom(err)) => Err(err),
+            Err(ParseInstrError::Nom(err)) => Err(err),
         }
     }
 }
@@ -37,19 +34,25 @@ where
     E: ErrorSource<'a>,
     P: ParseInstr<'a, E>,
 {
+    use crate::{
+        error::AddCause as _,
+        index::Index as _,
+        isa,
+        module::{self, MemIdx, TableIdx, TypeIdx},
+    };
+
     let start = &input;
     let (input, opcode) = Opcode::parse(input)?;
 
-    let bad_instr = move |reason| ErrorCause::Instr { opcode, reason };
+    let bad_instr = move |reason| crate::error::ErrorCause::Instr { opcode, reason };
     let bad_argument = move || bad_instr(InvalidInstr::Argument);
 
     let parse_lane_idx = move |input: &'a [u8]| -> crate::Parsed<'a, isa::LaneIdx, E> {
         if let Some((lane, input)) = input.split_first() {
             Ok((input, *lane))
         } else {
-            Err(nom::Err::Failure(E::from_error_kind_and_cause(
+            Err(nom::Err::Failure(E::from_error_cause(
                 input,
-                ErrorKind::Eof,
                 bad_instr(InvalidInstr::VectorLane),
             )))
         }
@@ -65,7 +68,8 @@ where
     macro_rules! simple_arguments {
         ($($parameter:ident: $argument:ty),+ => $case:ident) => {{
             $(
-                let (input, $parameter) = <$argument>::parse(input).add_cause_with(bad_argument)?;
+                let (input, $parameter) = <$argument>::parse(input)
+                    .add_cause_with(move || (input, bad_argument()))?;
             )+
 
             parser.$case($($parameter),+).to_parsed(start, opcode)?;
@@ -94,10 +98,10 @@ where
     macro_rules! copy_op {
         ($index:ty => $case:ident) => {{
             let (input, destination) = <$index>::parse(input)
-                .add_cause_with(move || bad_instr(InvalidInstr::Destination))?;
+                .add_cause_with(move || (input, bad_instr(InvalidInstr::Destination)))?;
 
-            let (input, source) =
-                <$index>::parse(input).add_cause_with(move || bad_instr(InvalidInstr::Source))?;
+            let (input, source) = <$index>::parse(input)
+                .add_cause_with(move || (input, bad_instr(InvalidInstr::Source)))?;
 
             parser.$case(destination, source).to_parsed(start, opcode)?;
             input
@@ -106,8 +110,11 @@ where
 
     macro_rules! v128_mem_lane_op {
         ($case:ident) => {{
-            let (input, memarg) = isa::MemArg::parse(input).add_cause_with(bad_argument)?;
+            let (input, memarg) =
+                isa::MemArg::parse(input).add_cause_with(move || (input, bad_argument()))?;
+
             let (input, lane) = parse_lane_idx(input)?;
+
             parser.$case(memarg, lane).to_parsed(start, opcode)?;
             input
         }};
@@ -132,11 +139,14 @@ where
         Opcode::Br => single_argument!(isa::LabelIdx => br),
         Opcode::BrIf => single_argument!(isa::LabelIdx => br_if),
         Opcode::BrTable => {
-            let mut targets =
-                isa::BrTableTargets::with_input(input).add_cause_with(bad_argument)?;
+            let mut targets = isa::BrTableTargets::with_input(input)
+                .add_cause_with(move || (input, bad_argument()))?;
 
             parser.br_table(&mut targets).to_parsed(start, opcode)?;
-            targets.finish().add_cause_with(bad_argument)?.0
+            targets
+                .finish()
+                .add_cause_with(move || (input, bad_argument()))?
+                .0
         }
         Opcode::Return => empty_case!(r#return),
         Opcode::Call => single_argument!(module::FuncIdx => call),
@@ -147,10 +157,13 @@ where
         Opcode::Select => empty_case!(select),
         Opcode::SelectTyped => {
             let mut types = isa::SelectTypes::with_parsed_length(input, Default::default())
-                .add_cause_with(bad_argument)?;
+                .add_cause_with(move || (input, bad_argument()))?;
 
             parser.select_typed(&mut types).to_parsed(start, opcode)?;
-            types.into_parser().add_cause_with(bad_argument)?.0
+            types
+                .into_parser()
+                .add_cause_with(move || (input, bad_argument()))?
+                .0
         }
         Opcode::LocalGet => single_argument!(module::LocalIdx => local_get),
         Opcode::LocalSet => single_argument!(module::LocalIdx => local_set),
@@ -183,12 +196,16 @@ where
         Opcode::MemorySize => single_argument!(MemIdx => memory_size),
         Opcode::MemoryGrow => single_argument!(MemIdx => memory_grow),
         Opcode::I32Const => {
-            let (input, n) = crate::values::leb128_s32(input).add_cause_with(bad_argument)?;
+            let (input, n) =
+                crate::values::leb128_s32(input).add_cause_with(move || (input, bad_argument()))?;
+
             parser.i32_const(n).to_parsed(start, opcode)?;
             input
         }
         Opcode::I64Const => {
-            let (input, n) = crate::values::leb128_s64(input).add_cause_with(bad_argument)?;
+            let (input, n) =
+                crate::values::leb128_s64(input).add_cause_with(move || (input, bad_argument()))?;
+
             parser.i64_const(n).to_parsed(start, opcode)?;
             input
         }

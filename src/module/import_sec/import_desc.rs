@@ -1,8 +1,4 @@
-use crate::{
-    error::{self, AddCause as _, ErrorCause},
-    index::Index as _,
-    types,
-};
+use crate::types;
 
 /// An [**`importdesc`**] describes what kind of entity is specified by an [`Import`].
 ///
@@ -27,39 +23,51 @@ pub enum ImportDesc {
 
 impl ImportDesc {
     #[allow(missing_docs)]
-    pub fn parse<'a, E: error::ErrorSource<'a>>(input: &'a [u8]) -> crate::Parsed<'a, Self, E> {
+    pub fn parse<'a, E: crate::error::ErrorSource<'a>>(
+        input: &'a [u8],
+    ) -> crate::Parsed<'a, Self, E> {
+        use crate::{
+            error::{ErrorCause, InvalidTag},
+            index::Index as _,
+            parser::Parser as _,
+        };
+        use nom::Parser as _;
+
         let (input, tag) = if let Some((first, remaining)) = input.split_first() {
             (remaining, *first)
         } else {
-            return Err(nom::Err::Failure(E::from_error_kind_and_cause(
+            return Err(nom::Err::Failure(E::from_error_cause(
                 input,
-                error::ErrorKind::OneOf,
-                ErrorCause::InvalidTag(error::InvalidTag::ImportDesc(None)),
+                ErrorCause::InvalidTag(InvalidTag::ImportDesc(None)),
             )));
         };
 
-        let bad_desc = move || ErrorCause::ImportDesc { kind: tag };
+        let bad_desc = move |input| (input, ErrorCause::ImportDesc { kind: tag });
 
         match tag {
-            0 => types::TypeIdx::parse(input)
-                .add_cause_with(bad_desc)
-                .map(|(input, index)| (input, Self::Function(index))),
-            1 => types::TableType::parse(input)
-                .add_cause_with(bad_desc)
-                .map(|(input, ty)| (input, Self::Table(ty))),
-            2 => types::MemType::parse(input)
-                .add_cause_with(bad_desc)
-                .map(|(input, ty)| (input, Self::Memory(ty))),
-            3 => types::GlobalType::parse(input)
-                .add_cause_with(bad_desc)
-                .map(|(input, ty)| (input, Self::Global(ty))),
-            4 => types::TagType::parse(input)
-                .add_cause_with(bad_desc)
-                .map(|(input, ty)| (input, Self::Tag(ty))),
-            _ => Err(nom::Err::Failure(E::from_error_kind_and_cause(
+            0 => types::TypeIdx::parse
+                .map(Self::Function)
+                .with_error_cause(bad_desc)
+                .parse(input),
+            1 => types::TableType::parse
+                .map(Self::Table)
+                .with_error_cause(bad_desc)
+                .parse(input),
+            2 => types::MemType::parse
+                .map(Self::Memory)
+                .with_error_cause(bad_desc)
+                .parse(input),
+            3 => types::GlobalType::parse
+                .map(Self::Global)
+                .with_error_cause(bad_desc)
+                .parse(input),
+            4 => types::TagType::parse
+                .map(Self::Tag)
+                .with_error_cause(bad_desc)
+                .parse(input),
+            _ => Err(nom::Err::Failure(E::from_error_cause(
                 &input[..1],
-                error::ErrorKind::OneOf,
-                ErrorCause::InvalidTag(error::InvalidTag::ImportDesc(Some(tag))),
+                ErrorCause::InvalidTag(InvalidTag::ImportDesc(Some(tag))),
             ))),
         }
     }

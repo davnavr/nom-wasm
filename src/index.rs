@@ -2,8 +2,6 @@
 //!
 //! [indices]: https://webassembly.github.io/spec/core/syntax/modules.html#syntax-index
 
-use crate::error::{self, AddCause as _};
-
 /// A [WebAssembly index](https://webassembly.github.io/spec/core/binary/modules.html#indices).
 pub trait Index:
     Copy
@@ -25,10 +23,17 @@ pub trait Index:
     const NAME: &'static str;
 
     /// Parses a [*LEB128*](crate::values::leb128) encoded unsigned 32-bit integer [`Index`].
-    fn parse<'a, E: error::ErrorSource<'a>>(input: &'a [u8]) -> crate::Parsed<'a, Self, E> {
-        crate::values::leb128_u32(input)
-            .map(|(input, index)| (input, Self::from(index)))
-            .add_cause(error::ErrorCause::Index(&Self::NAME))
+    fn parse<'a, E>(input: &'a [u8]) -> crate::Parsed<'a, Self, E>
+    where
+        E: crate::error::ErrorSource<'a>,
+    {
+        use crate::parser::Parser as _;
+        use nom::Parser as _;
+
+        crate::values::leb128_u32
+            .map(Self::from)
+            .with_error_cause(|input| (input, crate::error::ErrorCause::Index(&Self::NAME)))
+            .parse(input)
     }
 }
 
@@ -41,7 +46,7 @@ pub struct IndexParser;
 impl<'a, I, E> nom::Parser<&'a [u8], I, E> for IndexParser
 where
     I: Index,
-    E: error::ErrorSource<'a>,
+    E: crate::error::ErrorSource<'a>,
 {
     #[inline]
     fn parse(&mut self, input: &'a [u8]) -> crate::Parsed<'a, I, E> {

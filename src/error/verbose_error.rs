@@ -1,83 +1,53 @@
-use crate::error;
-use alloc::boxed::Box;
-use core::fmt::Debug;
-use nom::error::ParseError;
-
-#[derive(PartialEq)]
-enum Error<'a> {
-    Error(nom::error::Error<&'a [u8]>),
-    Cause(error::ErrorCause),
-}
-
-impl Debug for Error<'_> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Error(e) => Debug::fmt(e, f),
-            Self::Cause(c) => Debug::fmt(c, f),
-        }
-    }
-}
-
 #[derive(PartialEq)]
 struct Inner<'a> {
-    base: nom::error::Error<&'a [u8]>,
-    additional: alloc::vec::Vec<Error<'a>>,
+    base: crate::error::Error<'a>,
+    additional: alloc::vec::Vec<crate::error::Error<'a>>,
 }
 
 /// Accumulates information about an error, including its location, the kinds of error that
 /// occured, and the reasons why it occured.
 #[derive(PartialEq)]
 #[repr(transparent)]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "alloc")))]
-pub struct VerboseError<'a> {
-    inner: Box<Inner<'a>>,
-}
+pub struct VerboseError<'a>(alloc::boxed::Box<Inner<'a>>);
 
-impl Debug for VerboseError<'_> {
+impl core::fmt::Debug for VerboseError<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_list()
-            .entry(&self.inner.base)
-            .entries(&self.inner.additional)
+            .entry(&self.0.base)
+            .entries(&self.0.additional)
             .finish()
     }
 }
 
-impl<'a> ParseError<&'a [u8]> for VerboseError<'a> {
+impl<'a> nom::error::ParseError<&'a [u8]> for VerboseError<'a> {
+    #[inline]
     fn from_error_kind(input: &'a [u8], kind: nom::error::ErrorKind) -> Self {
-        Self {
-            inner: Box::new(Inner {
-                base: ParseError::from_error_kind(input, kind),
-                additional: Default::default(),
-            }),
-        }
+        crate::error::ErrorSource::from_error_cause(input, kind.into())
     }
 
-    fn append(input: &'a [u8], kind: nom::error::ErrorKind, mut other: Self) -> Self {
-        other
-            .inner
-            .additional
-            .push(Error::Error(ParseError::from_error_kind(input, kind)));
-
-        other
+    #[inline]
+    fn append(input: &'a [u8], kind: nom::error::ErrorKind, other: Self) -> Self {
+        crate::error::ErrorSource::append_with_cause(input, kind.into(), other)
     }
 }
 
-impl<'a> error::ErrorSource<'a> for VerboseError<'a> {
-    fn from_error_kind_and_cause(
-        input: &'a [u8],
-        kind: nom::error::ErrorKind,
-        cause: error::ErrorCause,
-    ) -> Self {
-        Self {
-            inner: Box::new(Inner {
-                base: ParseError::from_error_kind(input, kind),
-                additional: alloc::vec![Error::Cause(cause)],
-            }),
-        }
+impl<'a> crate::error::ErrorSource<'a> for VerboseError<'a> {
+    fn from_error_cause(input: &'a [u8], cause: crate::error::ErrorCause) -> Self {
+        Self(alloc::boxed::Box::new(Inner {
+            base: crate::error::ErrorSource::from_error_cause(input, cause),
+            additional: alloc::vec::Vec::new(),
+        }))
     }
 
-    fn with_cause(mut self, cause: error::ErrorCause) -> Self {
-        self.inner.additional.push(Error::Cause(cause));
-        self
+    fn append_with_cause(
+        input: &'a [u8],
+        cause: crate::error::ErrorCause,
+        mut other: Self,
+    ) -> Self {
+        other
+            .0
+            .additional
+            .push(crate::error::ErrorSource::from_error_cause(input, cause));
+        other
     }
 }

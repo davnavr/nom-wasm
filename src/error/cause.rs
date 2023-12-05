@@ -1,4 +1,3 @@
-use crate::values::leb128;
 use core::fmt::{Display, Formatter};
 
 /// Describes an [`ErrorCause`] where the length of some data was incorrect.
@@ -173,9 +172,10 @@ impl Display for MemArgComponent {
 #[non_exhaustive]
 #[allow(missing_docs)]
 pub enum ErrorCause {
+    Nom(nom::error::ErrorKind),
     Leb128 {
-        destination: leb128::Destination,
-        reason: leb128::InvalidEncoding,
+        destination: crate::values::leb128::Destination,
+        reason: crate::values::leb128::InvalidEncoding,
     },
     InvalidTag(InvalidTag),
     InvalidFlags(InvalidFlags),
@@ -240,34 +240,104 @@ pub enum ErrorCause {
 
 crate::static_assert::check_size!(ErrorCause, <= 16);
 
+impl From<nom::error::ErrorKind> for ErrorCause {
+    #[inline]
+    fn from(error: nom::error::ErrorKind) -> Self {
+        Self::Nom(error)
+    }
+}
+
+impl ErrorCause {
+    /// Attempts to map this [`ErrorCause`] to its closest [`nom::error::ErrorKind`] counterpart.
+    ///
+    /// This conversion may result in the loss of error information.
+    pub fn to_error_kind(self) -> nom::error::ErrorKind {
+        use crate::{
+            isa::{InvalidExpr, InvalidInstr},
+            values::InvalidVector,
+        };
+        use nom::error::ErrorKind as Kind;
+
+        match self {
+            Self::Nom(kind) => kind,
+            Self::Leb128 { .. } | Self::Index(_) => Kind::ManyTill,
+            Self::InvalidTag(_)
+            | Self::PreambleMagic(_)
+            | Self::PreambleVersion(_)
+            | Self::ImportDesc { .. }
+            | Self::Opcode(_) => Kind::Tag,
+            Self::InvalidFlags(_) => Kind::OneOf,
+            Self::Vector(InvalidVector::Length) | Self::NameLength | Self::SectionLength => {
+                Kind::LengthValue
+            }
+            Self::Vector(InvalidVector::Remaining { .. }) => Kind::Count,
+            Self::NameContents(_) | Self::SectionContents(_) => Kind::Complete,
+            Self::NameEncoding(_)
+            | Self::BlockType(_)
+            | Self::ValType(_)
+            | Self::RefType(_)
+            | Self::ModuleSectionOrder(_)
+            | Self::Expr(InvalidExpr::BlockNestingOverflow)
+            | Self::Expr(InvalidExpr::ExpectedEnds(_))
+            | Self::Instr {
+                reason:
+                    InvalidInstr::Unrecognized
+                    | InvalidInstr::BrTableLabelCount
+                    | InvalidInstr::SelectTypedArity(_),
+                ..
+            } => Kind::Verify,
+            Self::SectionId
+            | Self::CustomSectionName
+            | Self::Limits { .. }
+            | Self::MemType
+            | Self::TableType
+            | Self::GlobalType
+            | Self::TagType
+            | Self::Import(_)
+            | Self::MemArg(_)
+            | Self::Instr {
+                reason:
+                    InvalidInstr::Argument
+                    | InvalidInstr::Source
+                    | InvalidInstr::Destination
+                    | InvalidInstr::VectorLane,
+                ..
+            } => Kind::Eof,
+        }
+    }
+}
+
 impl Display for ErrorCause {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
+            Self::Nom(err) => write!(f, "could not parse: {}", err.description()),
             Self::Leb128 {
                 destination,
                 reason,
             } => {
+                use crate::values::leb128::{Destination, InvalidEncoding};
+
                 f.write_str("could not parse LEB128 encoded ")?;
 
                 match destination {
-                    leb128::Destination::U32 | leb128::Destination::U64 => f.write_str("un")?,
-                    leb128::Destination::S32 | leb128::Destination::S64 => (),
+                    Destination::U32 | Destination::U64 => f.write_str("un")?,
+                    Destination::S32 | Destination::S64 => (),
                 }
 
                 f.write_str("signed ")?;
 
                 match destination {
-                    leb128::Destination::U32 | leb128::Destination::S32 => f.write_str("32")?,
-                    leb128::Destination::U64 | leb128::Destination::S64 => f.write_str("64")?,
+                    Destination::U32 | Destination::S32 => f.write_str("32")?,
+                    Destination::U64 | Destination::S64 => f.write_str("64")?,
                 }
 
                 f.write_str("-bit integer")?;
 
                 match reason {
-                    leb128::InvalidEncoding::Overflow => {
+                    InvalidEncoding::Overflow => {
                         write!(f, ", an overflow occured while decoding the value")
                     }
-                    leb128::InvalidEncoding::NoContinuation => Ok(()),
+                    InvalidEncoding::NoContinuation => Ok(()),
                 }
             }
             Self::InvalidTag(tag) => Display::fmt(tag, f),

@@ -4,9 +4,6 @@
 //! [conventions]: https://webassembly.github.io/spec/core/binary/conventions.html
 //! [values]: https://webassembly.github.io/spec/core/binary/values.html
 
-use crate::error::{AddCause as _, ErrorCause, ErrorKind, ErrorSource};
-use nom::ToUsize;
-
 mod float;
 mod sequence;
 mod v128;
@@ -34,23 +31,28 @@ pub use vector::vector;
 ///
 /// [WebAssembly **`name`**]: https://webassembly.github.io/spec/core/binary/values.html#names
 /// [*LEB128* length]: leb128_u32
-pub fn name<'a, E: ErrorSource<'a>>(input: &'a [u8]) -> crate::Parsed<'a, &'a str, E> {
-    let (input, length) = leb128_u32(input).add_cause(ErrorCause::SectionLength)?;
+pub fn name<'a, E>(input: &'a [u8]) -> crate::Parsed<'a, &'a str, E>
+where
+    E: crate::error::ErrorSource<'a>,
+{
+    use crate::error::AddCause as _;
+    use nom::ToUsize as _;
+
+    let (input, length) =
+        leb128_u32(input).add_cause(input, crate::error::ErrorCause::SectionLength)?;
 
     if let Some(contents) = input.get(..length.to_usize()) {
         match core::str::from_utf8(contents) {
             Ok(name) => Ok((&input[length.to_usize()..], name)),
-            Err(err) => Err(nom::Err::Failure(E::from_error_kind_and_cause(
+            Err(err) => Err(nom::Err::Failure(E::from_error_cause(
                 contents,
-                ErrorKind::Verify,
-                ErrorCause::NameEncoding(err),
+                crate::error::ErrorCause::NameEncoding(err),
             ))),
         }
     } else {
-        Err(nom::Err::Failure(E::from_error_kind_and_cause(
+        Err(nom::Err::Failure(E::from_error_cause(
             input,
-            ErrorKind::Eof,
-            ErrorCause::NameContents(crate::error::LengthMismatch {
+            crate::error::ErrorCause::NameContents(crate::error::LengthMismatch {
                 expected: length,
                 actual: input.len().try_into().unwrap_or(u32::MAX),
             }),

@@ -1,8 +1,3 @@
-use crate::{
-    error::{self, AddCause as _},
-    module::ImportDesc,
-};
-
 /// Represents a [WebAssembly **`import`**].
 ///
 /// Note that importing more than one memory requires the [multi-memory proposal].
@@ -17,19 +12,21 @@ pub struct Import<'a> {
     /// The name of the import.
     pub name: &'a str,
     /// The description for the import.
-    pub desc: ImportDesc,
+    pub desc: crate::module::ImportDesc,
 }
 
 impl<'a> Import<'a> {
     #[allow(missing_docs)]
-    pub fn parse<E: error::ErrorSource<'a>>(input: &'a [u8]) -> crate::Parsed<'a, Self, E> {
+    pub fn parse<E: crate::error::ErrorSource<'a>>(input: &'a [u8]) -> crate::Parsed<'a, Self, E> {
+        use crate::error::{AddCause as _, ErrorCause, ImportComponent};
+
         let (input, module) = crate::values::name(input)
-            .add_cause(error::ErrorCause::Import(error::ImportComponent::Module))?;
+            .add_cause(input, ErrorCause::Import(ImportComponent::Module))?;
 
         let (input, name) = crate::values::name(input)
-            .add_cause(error::ErrorCause::Import(error::ImportComponent::Name))?;
+            .add_cause(input, ErrorCause::Import(ImportComponent::Name))?;
 
-        let (input, desc) = ImportDesc::parse(input)?;
+        let (input, desc) = crate::module::ImportDesc::parse(input)?;
 
         Ok((input, Self { module, name, desc }))
     }
@@ -40,7 +37,7 @@ impl<'a> Import<'a> {
 #[non_exhaustive]
 pub struct ImportParser;
 
-impl<'a, E: error::ErrorSource<'a>> nom::Parser<&'a [u8], Import<'a>, E> for ImportParser {
+impl<'a, E: crate::error::ErrorSource<'a>> nom::Parser<&'a [u8], Import<'a>, E> for ImportParser {
     #[inline]
     fn parse(&mut self, input: &'a [u8]) -> crate::Parsed<'a, Import<'a>, E> {
         Import::parse(input)
